@@ -26,30 +26,142 @@ jest.mock('blessed', () => ({
 }));
 
 const blessed = require('blessed');
-const { createLayout, createSidebar, createContentPanel } = require('../../src/tui/layout');
+const {
+  createLayout,
+  createMenuBar,
+  createTitleBar,
+  createHelpBar,
+  createContentPanel,
+  updateMenuBar,
+  MENU_ITEMS,
+  MENU_HEIGHT,
+  TITLE_HEIGHT,
+  HELP_HEIGHT,
+} = require('../../src/tui/layout');
 
-describe('createSidebar(screen)', () => {
+// ── createTitleBar ────────────────────────────────────────────────────────────
+
+describe('createTitleBar(screen)', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('calls blessed.list to create sidebar widget', () => {
+  test('calls blessed.box to create title bar', () => {
     const screen = blessed.screen();
-    createSidebar(screen);
-    expect(blessed.list).toHaveBeenCalled();
+    createTitleBar(screen);
+    expect(blessed.box).toHaveBeenCalled();
   });
 
-  test('returns a list widget', () => {
+  test('appends title bar to screen', () => {
     const screen = blessed.screen();
-    const sidebar = createSidebar(screen);
-    expect(sidebar).toBeDefined();
-    expect(sidebar.type).toBe('list');
-  });
-
-  test('appends sidebar to screen', () => {
-    const screen = blessed.screen();
-    createSidebar(screen);
+    createTitleBar(screen);
     expect(screen.append).toHaveBeenCalled();
   });
+
+  test('returns a box widget', () => {
+    const screen = blessed.screen();
+    const bar = createTitleBar(screen);
+    expect(bar.type).toBe('box');
+  });
 });
+
+// ── createMenuBar ─────────────────────────────────────────────────────────────
+
+describe('createMenuBar(screen)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('calls blessed.box (not blessed.list) to create menu bar', () => {
+    const screen = blessed.screen();
+    createMenuBar(screen);
+    expect(blessed.box).toHaveBeenCalled();
+    expect(blessed.list).not.toHaveBeenCalled();
+  });
+
+  test('appends menu bar to screen', () => {
+    const screen = blessed.screen();
+    createMenuBar(screen);
+    expect(screen.append).toHaveBeenCalled();
+  });
+
+  test('returns a box widget', () => {
+    const screen = blessed.screen();
+    const bar = createMenuBar(screen);
+    expect(bar.type).toBe('box');
+  });
+});
+
+// ── updateMenuBar ─────────────────────────────────────────────────────────────
+
+describe('updateMenuBar(menuBar, activeName)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('calls setContent on the menu bar widget', () => {
+    const screen = blessed.screen();
+    const menuBar = createMenuBar(screen);
+    updateMenuBar(menuBar, 'generator');
+    expect(menuBar.setContent).toHaveBeenCalled();
+  });
+
+  test('highlights "generator" when it is the active screen', () => {
+    const screen = blessed.screen();
+    const menuBar = createMenuBar(screen);
+    updateMenuBar(menuBar, 'generator');
+    const content = menuBar.setContent.mock.calls[0][0];
+    // Active item should have highlight markup, others should not be marked active
+    expect(content).toMatch(/generator/i);
+  });
+
+  test('highlights "browser" when it is the active screen', () => {
+    const screen = blessed.screen();
+    const menuBar = createMenuBar(screen);
+    updateMenuBar(menuBar, 'browser');
+    const content = menuBar.setContent.mock.calls[0][0];
+    expect(content).toMatch(/browser/i);
+  });
+
+  test('highlights "settings" when it is the active screen', () => {
+    const screen = blessed.screen();
+    const menuBar = createMenuBar(screen);
+    updateMenuBar(menuBar, 'settings');
+    const content = menuBar.setContent.mock.calls[0][0];
+    expect(content).toMatch(/settings/i);
+  });
+
+  test('content includes all 4 screen names', () => {
+    const screen = blessed.screen();
+    const menuBar = createMenuBar(screen);
+    updateMenuBar(menuBar, 'generator');
+    const content = menuBar.setContent.mock.calls[0][0];
+    expect(content).toMatch(/generator/i);
+    expect(content).toMatch(/browser/i);
+    expect(content).toMatch(/player/i);
+    expect(content).toMatch(/settings/i);
+  });
+});
+
+// ── createHelpBar ─────────────────────────────────────────────────────────────
+
+describe('createHelpBar(screen)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('calls blessed.box to create help bar', () => {
+    const screen = blessed.screen();
+    createHelpBar(screen);
+    expect(blessed.box).toHaveBeenCalled();
+  });
+
+  test('appends help bar to screen', () => {
+    const screen = blessed.screen();
+    createHelpBar(screen);
+    expect(screen.append).toHaveBeenCalled();
+  });
+
+  test('returns a box widget', () => {
+    const screen = blessed.screen();
+    const bar = createHelpBar(screen);
+    expect(bar.type).toBe('box');
+  });
+});
+
+// ── createContentPanel ────────────────────────────────────────────────────────
 
 describe('createContentPanel(screen)', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -63,7 +175,6 @@ describe('createContentPanel(screen)', () => {
   test('returns a box widget', () => {
     const screen = blessed.screen();
     const panel = createContentPanel(screen);
-    expect(panel).toBeDefined();
     expect(panel.type).toBe('box');
   });
 
@@ -74,20 +185,24 @@ describe('createContentPanel(screen)', () => {
   });
 });
 
+// ── createLayout ──────────────────────────────────────────────────────────────
+
 describe('createLayout(screen)', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('returns object with sidebar and content properties', () => {
+  test('returns object with menuBar, titleBar, helpBar, and content', () => {
     const screen = blessed.screen();
     const layout = createLayout(screen);
-    expect(layout).toHaveProperty('sidebar');
+    expect(layout).toHaveProperty('menuBar');
+    expect(layout).toHaveProperty('titleBar');
+    expect(layout).toHaveProperty('helpBar');
     expect(layout).toHaveProperty('content');
   });
 
-  test('sidebar is a list widget', () => {
+  test('menuBar is a box widget (not a list)', () => {
     const screen = blessed.screen();
-    const { sidebar } = createLayout(screen);
-    expect(sidebar.type).toBe('list');
+    const { menuBar } = createLayout(screen);
+    expect(menuBar.type).toBe('box');
   });
 
   test('content is a box widget', () => {
@@ -95,4 +210,32 @@ describe('createLayout(screen)', () => {
     const { content } = createLayout(screen);
     expect(content.type).toBe('box');
   });
+
+  test('layout does NOT have a sidebar property', () => {
+    const screen = blessed.screen();
+    const layout = createLayout(screen);
+    expect(layout).not.toHaveProperty('sidebar');
+  });
 });
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+describe('layout constants', () => {
+  test('MENU_ITEMS contains generator, browser, player, settings', () => {
+    expect(MENU_ITEMS.map(i => i.name)).toEqual(['generator', 'browser', 'player', 'settings']);
+  });
+
+  test('MENU_HEIGHT is a positive integer', () => {
+    expect(typeof MENU_HEIGHT).toBe('number');
+    expect(MENU_HEIGHT).toBeGreaterThan(0);
+  });
+
+  test('TITLE_HEIGHT is 1', () => {
+    expect(TITLE_HEIGHT).toBe(1);
+  });
+
+  test('HELP_HEIGHT is 1', () => {
+    expect(HELP_HEIGHT).toBe(1);
+  });
+});
+

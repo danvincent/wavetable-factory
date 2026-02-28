@@ -82,3 +82,57 @@ describe('createApp() integration smoke test', () => {
     expect(createSettingsScreen).toHaveBeenCalled();
   });
 });
+
+// ── Regression tests ──────────────────────────────────────────────────────────
+
+describe('regression: screen registry receives valid widgets (not undefined)', () => {
+  // Bug: createGeneratorScreen and createBrowserScreen return the container
+  // directly, not { container }. Accessing .container on the return value
+  // yields undefined, causing "Cannot read properties of undefined (reading 'show')"
+  // when the registry tries to show/hide the screen.
+
+  test('all registered screens have a show() method after createApp()', () => {
+    const app = createApp();
+    for (const name of ['generator', 'browser', 'player', 'settings']) {
+      const widget = app.registry.get(name);
+      expect(widget).toBeDefined();
+      expect(typeof widget.show).toBe('function');
+    }
+  });
+
+  test('none of the registered screens are undefined', () => {
+    const app = createApp();
+    for (const name of ['generator', 'browser', 'player', 'settings']) {
+      expect(app.registry.get(name)).not.toBeUndefined();
+    }
+  });
+});
+
+describe('regression: screen factories receive config module, not settings object', () => {
+  // Bug: app.js was passing config.load() (a plain {libraryPath} object) to
+  // createGeneratorScreen and createBrowserScreen, which call
+  // config.getLibraryPath(). Plain objects don't have that method, causing
+  // "TypeError: config.getLibraryPath is not a function" on first navigation.
+
+  test('createGeneratorScreen is called with an object that has getLibraryPath()', () => {
+    const { createGeneratorScreen } = require('../../src/tui/screens/generator');
+    createApp();
+    const [, configArg] = createGeneratorScreen.mock.calls[0];
+    expect(typeof configArg.getLibraryPath).toBe('function');
+  });
+
+  test('createBrowserScreen is called with an object that has getLibraryPath()', () => {
+    const { createBrowserScreen } = require('../../src/tui/screens/browser');
+    createApp();
+    const [, configArg] = createBrowserScreen.mock.calls[0];
+    expect(typeof configArg.getLibraryPath).toBe('function');
+  });
+
+  test('createGeneratorScreen is NOT called with a plain settings object', () => {
+    const { createGeneratorScreen } = require('../../src/tui/screens/generator');
+    createApp();
+    const [, configArg] = createGeneratorScreen.mock.calls[0];
+    // A plain settings object only has libraryPath — no methods
+    expect(typeof configArg.getLibraryPath).not.toBe('undefined');
+  });
+});

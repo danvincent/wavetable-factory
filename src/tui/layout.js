@@ -2,73 +2,153 @@
 
 const blessed = require('blessed');
 
-const SIDEBAR_ITEMS = [
-  ' [1] Generator',
-  ' [2] Browser',
-  ' [3] Player',
-  ' [4] Settings',
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const TITLE_HEIGHT = 1;
+const MENU_HEIGHT = 1;
+const HELP_HEIGHT = 1;
+
+/** Label and shortcut key for each screen in the menu bar. */
+const MENU_ITEMS = [
+  { name: 'generator', label: 'Generator', key: '1' },
+  { name: 'browser',   label: 'Browser',   key: '2' },
+  { name: 'player',    label: 'Player',     key: '3' },
+  { name: 'settings',  label: 'Settings',   key: '4' },
 ];
 
-const SIDEBAR_WIDTH = 20;
+const CONTENT_TOP = TITLE_HEIGHT + MENU_HEIGHT;
+const CONTENT_HEIGHT = `100%-${CONTENT_TOP + HELP_HEIGHT}`;
+
+// ── Title bar ─────────────────────────────────────────────────────────────────
 
 /**
- * Create and append the sidebar list widget.
+ * Create the 1-row title bar at the very top of the screen.
  * @param {object} screen - blessed screen
- * @returns {object} blessed list widget
+ * @returns {object} blessed box
  */
-function createSidebar(screen) {
-  const sidebar = blessed.list({
+function createTitleBar(screen) {
+  const bar = blessed.box({
     top: 0,
     left: 0,
-    width: SIDEBAR_WIDTH,
-    height: '100%',
-    label: ' Navigation ',
-    border: { type: 'line' },
-    style: {
-      selected: { bg: 'blue', fg: 'white', bold: true },
-      item: { fg: 'white' },
-      border: { fg: 'cyan' },
-      label: { fg: 'cyan' },
-    },
-    items: SIDEBAR_ITEMS,
-    keys: false,
-    mouse: true,
-    scrollable: false,
+    width: '100%',
+    height: TITLE_HEIGHT,
+    tags: false,
+    content: '  \u266a Wavetable Factory',
+    style: { bg: 'blue', fg: 'white', bold: true },
   });
-  screen.append(sidebar);
-  return sidebar;
+  screen.append(bar);
+  return bar;
+}
+
+// ── Menu bar ──────────────────────────────────────────────────────────────────
+
+/**
+ * Build the menu bar content string, highlighting the active screen.
+ * @param {string} activeName
+ * @returns {string} blessed-tagged string
+ */
+function buildMenuContent(activeName) {
+  return MENU_ITEMS.map(({ name, label, key }) => {
+    const text = ` [${key}] ${label} `;
+    return name === activeName
+      ? `{black-fg}{cyan-bg}${text}{/cyan-bg}{/black-fg}`
+      : `{white-fg}${text}{/white-fg}`;
+  }).join('{grey-fg}\u2502{/grey-fg}');
 }
 
 /**
- * Create and append the main content panel box.
+ * Create the horizontal menu bar (below the title bar).
  * @param {object} screen - blessed screen
- * @returns {object} blessed box widget
+ * @returns {object} blessed box
+ */
+function createMenuBar(screen) {
+  const bar = blessed.box({
+    top: TITLE_HEIGHT,
+    left: 0,
+    width: '100%',
+    height: MENU_HEIGHT,
+    tags: true,
+    content: buildMenuContent('generator'),
+    style: { bg: 'black' },
+  });
+  screen.append(bar);
+  return bar;
+}
+
+/**
+ * Update the menu bar to highlight the active screen.
+ * @param {object} menuBar - blessed box returned by createMenuBar
+ * @param {string} activeName - the active screen name
+ */
+function updateMenuBar(menuBar, activeName) {
+  menuBar.setContent(buildMenuContent(activeName));
+}
+
+// ── Help bar ──────────────────────────────────────────────────────────────────
+
+/**
+ * Create the 1-row help/hint bar at the very bottom of the screen.
+ * @param {object} screen - blessed screen
+ * @returns {object} blessed box
+ */
+function createHelpBar(screen) {
+  const bar = blessed.box({
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: HELP_HEIGHT,
+    tags: true,
+    content: ' {grey-fg}[q]{/grey-fg} Quit  {grey-fg}[Tab]{/grey-fg} Cycle  {grey-fg}[1-4]{/grey-fg} Jump',
+    style: { bg: 'black' },
+  });
+  screen.append(bar);
+  return bar;
+}
+
+// ── Content panel ─────────────────────────────────────────────────────────────
+
+/**
+ * Create the main content panel (fills space between menu and help bars).
+ * @param {object} screen - blessed screen
+ * @returns {object} blessed box
  */
 function createContentPanel(screen) {
   const content = blessed.box({
-    top: 0,
-    left: SIDEBAR_WIDTH,
-    width: `100%-${SIDEBAR_WIDTH}`,
-    height: '100%',
-    border: { type: 'line' },
-    style: {
-      border: { fg: 'cyan' },
-    },
+    top: CONTENT_TOP,
+    left: 0,
+    width: '100%',
+    height: CONTENT_HEIGHT,
+    style: { bg: 'black' },
     scrollable: false,
   });
   screen.append(content);
   return content;
 }
 
+// ── Full layout ───────────────────────────────────────────────────────────────
+
 /**
- * Create the full layout: sidebar + content panel.
+ * Create the complete application layout.
  * @param {object} screen - blessed screen
- * @returns {{ sidebar, content }}
+ * @returns {{ titleBar, menuBar, content, helpBar }}
  */
 function createLayout(screen) {
-  const sidebar = createSidebar(screen);
-  const content = createContentPanel(screen);
-  return { sidebar, content };
+  const titleBar = createTitleBar(screen);
+  const menuBar  = createMenuBar(screen);
+  const content  = createContentPanel(screen);
+  const helpBar  = createHelpBar(screen);
+  return { titleBar, menuBar, content, helpBar };
 }
 
-module.exports = { createLayout, createSidebar, createContentPanel, SIDEBAR_ITEMS, SIDEBAR_WIDTH };
+module.exports = {
+  createLayout,
+  createTitleBar,
+  createMenuBar,
+  updateMenuBar,
+  createHelpBar,
+  createContentPanel,
+  MENU_ITEMS,
+  MENU_HEIGHT,
+  TITLE_HEIGHT,
+  HELP_HEIGHT,
+};

@@ -1,7 +1,7 @@
 'use strict';
 
 const blessed = require('blessed');
-const { createLayout, SIDEBAR_ITEMS } = require('./layout');
+const { createLayout, MENU_ITEMS, updateMenuBar } = require('./layout');
 const { registerGlobalKeys, SCREEN_ORDER } = require('./keybindings');
 const { createScreenRegistry } = require('./screens/index');
 const config = require('../config');
@@ -22,18 +22,17 @@ function createApp() {
     forceUnicode: true,
   });
 
-  const { sidebar, content } = createLayout(screen);
+  const { menuBar, content } = createLayout(screen);
   const registry = createScreenRegistry(content);
-  const settings = config.load();
 
   // Build all real screens and register them
-  const generatorContainer = createGeneratorScreen(content, settings);
+  const generatorContainer = createGeneratorScreen(content, config);
   registry.register('generator', generatorContainer);
 
   const playerScreen = createPlayerScreen(content);
   registry.register('player', playerScreen.container);
 
-  const browserContainer = createBrowserScreen(content, settings, {
+  const browserContainer = createBrowserScreen(content, config, {
     onLoadPlayer: (filePath) => {
       navigate('player');
       playerScreen.loadFile(filePath);
@@ -53,7 +52,7 @@ function createApp() {
     currentScreen = name;
     currentSidebarIndex = idx;
     registry.show(name);
-    sidebar.select(idx);
+    updateMenuBar(menuBar, name);
     screen.render();
   }
 
@@ -68,11 +67,6 @@ function createApp() {
   }
 
   registerGlobalKeys(screen, { quit, navigate, cyclePanel });
-
-  // Sidebar click navigation
-  sidebar.on('select', (_, index) => {
-    navigate(SCREEN_ORDER[index]);
-  });
 
   function start() {
     navigate('generator');

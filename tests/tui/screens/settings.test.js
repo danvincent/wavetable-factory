@@ -57,15 +57,27 @@ describe('onSavePath(newPath, config)', () => {
     expect(result.message).toContain(tmpDir);
   });
 
-  test('returns error when path does not exist', async () => {
-    const result = await onSavePath('/nonexistent/path/xyz', mockConfig);
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/does not exist|not found/i);
+  test('creates directory and succeeds when path does not exist', async () => {
+    const newDir = path.join(tmpDir, 'auto-created-' + Date.now());
+    const result = await onSavePath(newDir, mockConfig);
+    expect(result.success).toBe(true);
+    const exists = await fs.pathExists(newDir);
+    expect(exists).toBe(true);
+    await fs.remove(newDir);
   });
 
-  test('does NOT call setLibraryPath when path does not exist', async () => {
-    await onSavePath('/nonexistent/path/xyz', mockConfig);
-    expect(mockConfig.setLibraryPath).not.toHaveBeenCalled();
+  test('calls setLibraryPath even when directory had to be created', async () => {
+    const newDir = path.join(tmpDir, 'auto-created2-' + Date.now());
+    await onSavePath(newDir, mockConfig);
+    expect(mockConfig.setLibraryPath).toHaveBeenCalledWith(newDir);
+    await fs.remove(newDir);
+  });
+
+  test('success message mentions the path when directory was created', async () => {
+    const newDir = path.join(tmpDir, 'auto-created3-' + Date.now());
+    const result = await onSavePath(newDir, mockConfig);
+    expect(result.message).toContain(newDir);
+    await fs.remove(newDir);
   });
 
   test('returns error when path is empty string', async () => {

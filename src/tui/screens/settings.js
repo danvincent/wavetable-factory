@@ -19,10 +19,17 @@ async function onSavePath(rawPath, config) {
     return { success: false, message: 'Path is required — cannot be empty.' };
   }
 
+  // Create the directory if it doesn't exist, then validate it is a directory
+  try {
+    await fs.ensureDir(newPath);
+  } catch (err) {
+    return { success: false, message: `Could not create directory: ${err.message}` };
+  }
+
   let stat;
   try {
     stat = await fs.stat(newPath);
-  } catch {
+  } catch (err) {
     return { success: false, message: `Path does not exist: ${newPath}` };
   }
 
