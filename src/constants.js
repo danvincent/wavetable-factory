@@ -29,7 +29,7 @@ const SUBFOLDER_NAMES = {
   POLYEND: 'polyend',
 };
 
-const WAVEFORM_TYPES = ['sine', 'sawtooth', 'square', 'triangle', 'pulse', 'additive'];
+const WAVEFORM_TYPES = ['sine', 'sawtooth', 'square', 'triangle', 'pulse', 'additive', 'noise', 'wavefold', 'fm', 'supersaw'];
 
 const COMPLEXITY_MIN = 1;
 const COMPLEXITY_MAX = 10;

@@ -3,7 +3,7 @@
 const path = require('path');
 const fs   = require('fs-extra');
 
-const { ask, choose, printHeader, printSuccess, printError, printInfo, hr } = require('../prompt');
+const { choose, askValidated, ask, printHeader, printSuccess, printError, printInfo, hr } = require('../prompt');
 const { generateWavetable } = require('../../engine/generator');
 const { generateRandomWavetable } = require('../../engine/randomizer');
 const { exportForAbleton, exportForPolyend } = require('../../engine/exporter');
@@ -33,32 +33,24 @@ const NOUNS = [
 
 function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-function generateName(type) {
-  return `${randomFrom(ADJECTIVES)}-${randomFrom(NOUNS)}-${type}`;
-}
-
-// ── Target selection ──────────────────────────────────────────────────────────
-
-const TARGET_OPTIONS = ['Ableton Live (32-bit float)', 'Polyend Tracker (16-bit PCM)', 'Both'];
-
-async function pickTarget() {
-  return choose('Export target', TARGET_OPTIONS);
+function generateName() {
+  return `${randomFrom(ADJECTIVES)}-${randomFrom(NOUNS)}-table`;
 }
 
 // ── Save helpers ──────────────────────────────────────────────────────────────
 
 async function saveWavetable(frames, name, target, libraryPath) {
-  const abletonDir  = path.join(libraryPath, SUBFOLDER_NAMES.ABLETON);
-  const polyendDir  = path.join(libraryPath, SUBFOLDER_NAMES.POLYEND);
+  const abletonDir = path.join(libraryPath, SUBFOLDER_NAMES.ABLETON);
+  const polyendDir = path.join(libraryPath, SUBFOLDER_NAMES.POLYEND);
   const saved = [];
 
-  if (target === 0 || target === 2) { // Ableton or Both
+  if (target === 0 || target === 2) {
     await fs.ensureDir(abletonDir);
     const out = path.join(abletonDir, `${name}.wav`);
     await exportForAbleton(frames, out);
     saved.push(out);
   }
-  if (target === 1 || target === 2) { // Polyend or Both
+  if (target === 1 || target === 2) {
     await fs.ensureDir(polyendDir);
     const out = path.join(polyendDir, `${name}.wav`);
     await exportForPolyend(frames, out);
@@ -69,25 +61,23 @@ async function saveWavetable(frames, name, target, libraryPath) {
 
 // ── Sub-menu ──────────────────────────────────────────────────────────────────
 
+const WAVEFORM_LABELS = WAVEFORM_TYPES.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+const GENERATOR_OPTIONS = [...WAVEFORM_LABELS, 'Random (fully randomised)', 'Back'];
+const RANDOM_IDX = GENERATOR_OPTIONS.indexOf('Random (fully randomised)');
+const BACK_IDX   = GENERATOR_OPTIONS.indexOf('Back');
+
+const TARGET_OPTIONS  = ['Ableton Live (32-bit float)', 'Polyend Tracker (16-bit PCM)', 'Both'];
+const TARGET_DEFAULT  = 2; // Both
+
 async function generatorMenu(config) {
   while (true) {
     printHeader('Wavetable Generator');
-    printInfo('Select a waveform type or generate a random wavetable.\n');
 
-    const waveformLabels = WAVEFORM_TYPES.map(t => t.charAt(0).toUpperCase() + t.slice(1));
-    const menuOptions = [...waveformLabels, 'Random (fully randomised)'];
+    const idx = await choose('Select waveform type', GENERATOR_OPTIONS, RANDOM_IDX);
+    if (idx === BACK_IDX) break;
 
-    const sel = await ask('  Choose [1-' + (menuOptions.length) + '] or 0 to go back');
-    if (sel === '0') break;
-
-    const idx = parseInt(sel, 10) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= menuOptions.length) {
-      printError('Invalid selection.');
-      continue;
-    }
-
-    const isRandom = idx === menuOptions.length - 1;
-    const type = isRandom ? 'random' : WAVEFORM_TYPES[idx];
+    const isRandom = idx === RANDOM_IDX;
+    const type     = isRandom ? 'random' : WAVEFORM_TYPES[idx];
 
     hr();
 
@@ -95,24 +85,45 @@ async function generatorMenu(config) {
     let frameCount = ABLETON.defaultFrameCount;
 
     if (!isRandom) {
-      const complexStr = await ask(
-        `Complexity (${COMPLEXITY_MIN}-${COMPLEXITY_MAX}) [${COMPLEXITY_DEFAULT}]`
+      const complexStr = await askValidated(
+        `Complexity (${COMPLEXITY_MIN}–${COMPLEXITY_MAX})`,
+        v => {
+          const n = parseInt(v, 10);
+          if (isNaN(n) || n < COMPLEXITY_MIN || n > COMPLEXITY_MAX)
+            return `Enter a number between ${COMPLEXITY_MIN} and ${COMPLEXITY_MAX}`;
+          return null;
+        },
+        String(COMPLEXITY_DEFAULT)
       );
-      if (complexStr !== '') {
-        const c = parseInt(complexStr, 10);
-        if (!isNaN(c) && c >= COMPLEXITY_MIN && c <= COMPLEXITY_MAX) complexity = c;
-        else { printError('Invalid complexity — using default.'); }
-      }
+      complexity = parseInt(complexStr, 10);
 
-      const frameStr = await ask(`Frame count [${ABLETON.defaultFrameCount}]`);
-      if (frameStr !== '') {
-        const f = parseInt(frameStr, 10);
-        if (!isNaN(f) && f >= 1 && f <= ABLETON.maxFrameCount) frameCount = f;
-        else { printError('Invalid frame count — using default.'); }
-      }
+      const frameStr = await askValidated(
+        `Frame count (1–${ABLETON.maxFrameCount})`,
+        v => {
+          const n = parseInt(v, 10);
+          if (isNaN(n) || n < 1 || n > ABLETON.maxFrameCount)
+            return `Enter a number between 1 and ${ABLETON.maxFrameCount}`;
+          return null;
+        },
+        String(ABLETON.defaultFrameCount)
+      );
+      frameCount = parseInt(frameStr, 10);
+    } else {
+      const complexStr = await askValidated(
+        `Complexity (${COMPLEXITY_MIN}–${COMPLEXITY_MAX})`,
+        v => {
+          const n = parseInt(v, 10);
+          if (isNaN(n) || n < COMPLEXITY_MIN || n > COMPLEXITY_MAX)
+            return `Enter a number between ${COMPLEXITY_MIN} and ${COMPLEXITY_MAX}`;
+          return null;
+        },
+        String(COMPLEXITY_DEFAULT)
+      );
+      complexity = parseInt(complexStr, 10);
     }
 
-    const targetIdx = await pickTarget();
+    const targetIdx = await choose('Export target', TARGET_OPTIONS, TARGET_DEFAULT);
+
     const libraryPath = config.getLibraryPath();
     if (!libraryPath) {
       printError('Library path not configured. Please set it in Settings.');
@@ -120,16 +131,12 @@ async function generatorMenu(config) {
     }
 
     try {
-      printInfo('\nGenerating…');
-      let frames;
-      if (isRandom) {
-        frames = generateRandomWavetable(complexity, frameCount, ABLETON.samplesPerFrame);
-        type; // type is 'random' — use for name
-      } else {
-        frames = generateWavetable({ type, frameCount, samplesPerFrame: ABLETON.samplesPerFrame, complexity });
-      }
+      printInfo('Generating…');
+      const frames = isRandom
+        ? generateRandomWavetable(complexity, frameCount, ABLETON.samplesPerFrame)
+        : generateWavetable({ type, frameCount, samplesPerFrame: ABLETON.samplesPerFrame, complexity });
 
-      const name = generateName(isRandom ? 'random' : type);
+      const name  = generateName();
       const saved = await saveWavetable(frames, name, targetIdx, libraryPath);
       saved.forEach(p => printSuccess(`Saved: ${p}`));
     } catch (err) {

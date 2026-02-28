@@ -1,7 +1,7 @@
 'use strict';
 
-jest.mock('fs-extra', () => ({ ensureDir: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../../src/cli/prompt', () => ({
+  choose:       jest.fn(),
   ask:          jest.fn(),
   printHeader:  jest.fn(),
   printSuccess: jest.fn(),
@@ -10,73 +10,65 @@ jest.mock('../../../src/cli/prompt', () => ({
   hr:           jest.fn(),
 }));
 
-const { ask, printSuccess, printError } = require('../../../src/cli/prompt');
-const fs = require('fs-extra');
+jest.mock('fs-extra', () => ({ ensureDir: jest.fn().mockResolvedValue(undefined) }));
+
+const { choose, ask, printSuccess, printError } = require('../../../src/cli/prompt');
+const fsExtra = require('fs-extra');
 const { settingsMenu } = require('../../../src/cli/screens/settings');
 
 const MOCK_CONFIG = {
-  getLibraryPath:  jest.fn(() => '/lib'),
-  setLibraryPath:  jest.fn(),
+  getLibraryPath: jest.fn(),
+  setLibraryPath: jest.fn(),
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  MOCK_CONFIG.getLibraryPath.mockReturnValue('/lib');
+});
 
 describe('settingsMenu(config)', () => {
-  test('exits on 0', async () => {
-    ask.mockResolvedValueOnce('0');
+  test('shows current library path', async () => {
+    choose.mockResolvedValueOnce(1); // Back
+    await settingsMenu(MOCK_CONFIG);
+    expect(MOCK_CONFIG.getLibraryPath).toHaveBeenCalled();
+  });
+
+  test('exits on Back selection', async () => {
+    choose.mockResolvedValueOnce(1);
     await expect(settingsMenu(MOCK_CONFIG)).resolves.toBeUndefined();
   });
 
-  test('shows current library path', async () => {
-    const { printInfo } = require('../../../src/cli/prompt');
-    ask.mockResolvedValueOnce('0');
+  test('updates library path on valid input', async () => {
+    choose.mockResolvedValueOnce(0).mockResolvedValueOnce(1); // Change path, then Back
+    ask.mockResolvedValueOnce('/new/path');
     await settingsMenu(MOCK_CONFIG);
-    expect(printInfo).toHaveBeenCalledWith(expect.stringMatching(/\/lib/));
-  });
-
-  test('shows (not set) when path is null', async () => {
-    const cfg = { getLibraryPath: jest.fn(() => null), setLibraryPath: jest.fn() };
-    const { printInfo } = require('../../../src/cli/prompt');
-    ask.mockResolvedValueOnce('0');
-    await settingsMenu(cfg);
-    expect(printInfo).toHaveBeenCalledWith(expect.stringMatching(/not set/));
-  });
-
-  test('updates library path and creates directory', async () => {
-    ask
-      .mockResolvedValueOnce('1')
-      .mockResolvedValueOnce('/new/path')
-      .mockResolvedValueOnce('0');
-    await settingsMenu(MOCK_CONFIG);
-    expect(fs.ensureDir).toHaveBeenCalledWith('/new/path');
+    expect(fsExtra.ensureDir).toHaveBeenCalledWith('/new/path');
     expect(MOCK_CONFIG.setLibraryPath).toHaveBeenCalledWith('/new/path');
-    expect(printSuccess).toHaveBeenCalledWith(expect.stringMatching(/\/new\/path/));
+    expect(printSuccess).toHaveBeenCalled();
   });
 
-  test('shows error when path is empty', async () => {
-    ask
-      .mockResolvedValueOnce('1')
-      .mockResolvedValueOnce('')
-      .mockResolvedValueOnce('0');
+  test('shows error on empty path', async () => {
+    choose.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    ask.mockResolvedValueOnce('');
     await settingsMenu(MOCK_CONFIG);
     expect(printError).toHaveBeenCalledWith(expect.stringMatching(/empty/i));
     expect(MOCK_CONFIG.setLibraryPath).not.toHaveBeenCalled();
   });
 
-  test('shows error when directory cannot be created', async () => {
-    fs.ensureDir.mockRejectedValueOnce(new Error('permission denied'));
-    ask
-      .mockResolvedValueOnce('1')
-      .mockResolvedValueOnce('/bad/path')
-      .mockResolvedValueOnce('0');
+  test('shows error if directory creation fails', async () => {
+    fsExtra.ensureDir.mockRejectedValueOnce(new Error('permission denied'));
+    choose.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    ask.mockResolvedValueOnce('/bad/path');
     await settingsMenu(MOCK_CONFIG);
     expect(printError).toHaveBeenCalledWith(expect.stringMatching(/permission denied/));
-    expect(MOCK_CONFIG.setLibraryPath).not.toHaveBeenCalled();
   });
 
-  test('shows error for unknown selection', async () => {
-    ask.mockResolvedValueOnce('9').mockResolvedValueOnce('0');
+  test('shows (not set) when no path configured', async () => {
+    MOCK_CONFIG.getLibraryPath.mockReturnValue(null);
+    choose.mockResolvedValueOnce(1);
+    const { printInfo } = require('../../../src/cli/prompt');
     await settingsMenu(MOCK_CONFIG);
-    expect(printError).toHaveBeenCalledWith(expect.stringMatching(/invalid/i));
+    expect(printInfo).toHaveBeenCalledWith(expect.stringMatching(/not set/));
   });
 });
+

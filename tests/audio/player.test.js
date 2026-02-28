@@ -7,9 +7,6 @@ const fs = require('fs-extra');
 // Mock child_process.spawn for playback tests
 jest.mock('child_process', () => ({
   spawn: jest.fn(() => ({
-    stdin: { write: jest.fn(), end: jest.fn(), destroyed: false, on: jest.fn() },
-    stderr: { on: jest.fn() },
-    stdout: { on: jest.fn() },
     on: jest.fn(),
     kill: jest.fn(),
     pid: 12345,
@@ -167,21 +164,14 @@ describe('getWindow(frames, position, windowSize)', () => {
 // ── startPlayback / stopPlayback ──────────────────────────────────────────────
 
 describe('startPlayback(samples, sampleRate)', () => {
-  test('spawns ffplay process', () => {
+  test('spawns ffplay process with temp WAV file', () => {
     const samples = new Float32Array(256);
     startPlayback(samples, 44100);
     expect(spawn).toHaveBeenCalledWith(
       'ffplay',
-      expect.arrayContaining(['-f', 's16le', '-ar', '44100']),
+      expect.arrayContaining(['-loop', '0']),
       expect.any(Object)
     );
-  });
-
-  test('writes data to ffplay stdin', () => {
-    const samples = new Float32Array(256);
-    startPlayback(samples, 44100);
-    const proc = spawn.mock.results[0].value;
-    expect(proc.stdin.write).toHaveBeenCalled();
   });
 
   test('stopPlayback kills the process', () => {
@@ -203,7 +193,86 @@ describe('updatePlaybackWindow(samples)', () => {
 
   test('accepts new sample buffer while playing', () => {
     startPlayback(new Float32Array(256), 44100);
-    expect(() => updatePlaybackWindow(new Float32Array(512))).not.toThrow();
+    expect(() => updatePlaybackWindow(new Float32Array(512), 44100)).not.toThrow();
     stopPlayback();
+  });
+});
+
+// ── synthesize ────────────────────────────────────────────────────────────────
+
+const { synthesize } = require('../../src/audio/player');
+
+describe('synthesize(frames, position, windowSize, freq, sampleRate, durationSec)', () => {
+  // Build a recognisable test frame: a perfect sine, 2048 samples
+  const SAMPLES_PER_FRAME = 2048;
+  const FRAME = (() => {
+    const f = new Float32Array(SAMPLES_PER_FRAME);
+    for (let i = 0; i < SAMPLES_PER_FRAME; i++) f[i] = Math.sin(2 * Math.PI * i / SAMPLES_PER_FRAME);
+    return f;
+  })();
+  const FRAMES = [FRAME, FRAME, FRAME, FRAME]; // 4 identical frames
+
+  test('returns a Float32Array', () => {
+    const out = synthesize(FRAMES, 0, 1, 261.63, 44100, 0.1);
+    expect(out).toBeInstanceOf(Float32Array);
+  });
+
+  test('output length equals round(sampleRate * durationSec)', () => {
+    const out = synthesize(FRAMES, 0, 1, 261.63, 44100, 0.5);
+    expect(out.length).toBe(Math.round(44100 * 0.5));
+  });
+
+  test('output is audibly at the correct frequency (zero crossing count)', () => {
+    const freq = 440;
+    const sampleRate = 44100;
+    const duration = 1.0;
+    const out = synthesize(FRAMES, 0, 1, freq, sampleRate, duration);
+    // Count zero crossings (positive-going) — should be ~freq per second
+    let crossings = 0;
+    for (let i = 1; i < out.length; i++) {
+      if (out[i - 1] < 0 && out[i] >= 0) crossings++;
+    }
+    expect(crossings).toBeGreaterThan(freq * 0.9);
+    expect(crossings).toBeLessThan(freq * 1.1);
+  });
+
+  test('all samples are in [-1, 1]', () => {
+    const out = synthesize(FRAMES, 0, 1, 261.63, 44100, 0.1);
+    for (const s of out) {
+      expect(Math.abs(s)).toBeLessThanOrEqual(1.001);
+    }
+  });
+
+  test('position 0 uses first frame, position 1 uses last frame', () => {
+    const lowFrame = new Float32Array(SAMPLES_PER_FRAME).fill(0.1);  // DC offset ~0.1
+    const highFrame = new Float32Array(SAMPLES_PER_FRAME).fill(0.9); // DC offset ~0.9
+    const frames = [lowFrame, highFrame];
+    const outLow  = synthesize(frames, 0, 1, 261.63, 44100, 0.01);
+    const outHigh = synthesize(frames, 1, 1, 261.63, 44100, 0.01);
+    const avgLow  = outLow.reduce((a, v) => a + v, 0) / outLow.length;
+    const avgHigh = outHigh.reduce((a, v) => a + v, 0) / outHigh.length;
+    expect(avgLow).toBeCloseTo(0.1, 1);
+    expect(avgHigh).toBeCloseTo(0.9, 1);
+  });
+
+  test('windowSize 1 holds a single frame throughout', () => {
+    const silentFrame = new Float32Array(SAMPLES_PER_FRAME).fill(0);
+    const loudFrame   = new Float32Array(SAMPLES_PER_FRAME).fill(0.5);
+    const frames = [silentFrame, loudFrame, silentFrame, loudFrame];
+    // position=0, window=1 → only frame 0 (silent)
+    const out = synthesize(frames, 0, 1, 261.63, 44100, 0.05);
+    const rms = Math.sqrt(out.reduce((a, v) => a + v * v, 0) / out.length);
+    expect(rms).toBeCloseTo(0, 3);
+  });
+
+  test('works with Polyend-format frames (256 samples)', () => {
+    const smallFrame = (() => {
+      const f = new Float32Array(256);
+      for (let i = 0; i < 256; i++) f[i] = Math.sin(2 * Math.PI * i / 256);
+      return f;
+    })();
+    const out = synthesize([smallFrame], 0, 1, 261.63, 44100, 0.05);
+    expect(out).toBeInstanceOf(Float32Array);
+    expect(out.length).toBe(Math.round(44100 * 0.05));
   });
 });

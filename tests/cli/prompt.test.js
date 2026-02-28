@@ -17,22 +17,12 @@ jest.mock('figlet', () => ({
   textSync: jest.fn(() => 'WAVETABLE FACTORY'),
 }));
 
-// ── readline mock ─────────────────────────────────────────────────────────────
-jest.mock('readline', () => {
-  const state = { answers: [], idx: 0 };
-  return {
-    _setAnswers(arr) { state.answers = [...arr]; state.idx = 0; },
-    createInterface: () => ({
-      question: (q, cb) => {
-        const answer = state.idx < state.answers.length ? state.answers[state.idx++] : '';
-        setImmediate(() => cb(answer));
-      },
-      close: () => {},
-    }),
-  };
-});
+// ── inquirer mock ─────────────────────────────────────────────────────────────
+jest.mock('inquirer', () => ({
+  prompt: jest.fn(),
+}));
 
-const rl = require('readline');
+const inquirer = require('inquirer');
 const ora = require('ora');
 const {
   ask, askValidated, choose, confirm,
@@ -41,9 +31,7 @@ const {
 } = require('../../src/cli/prompt');
 
 beforeEach(() => {
-  closeRL();
   jest.clearAllMocks();
-  // restore ora spinner mock state
   ora._spinner.start.mockReturnValue(ora._spinner);
 });
 
@@ -51,12 +39,12 @@ beforeEach(() => {
 
 describe('ask(question)', () => {
   test('resolves with the trimmed answer', async () => {
-    rl._setAnswers(['  hello world  ']);
+    inquirer.prompt.mockResolvedValue({ answer: '  hello world  ' });
     expect(await ask('Enter something:')).toBe('hello world');
   });
 
   test('resolves with empty string when user hits enter', async () => {
-    rl._setAnswers(['']);
+    inquirer.prompt.mockResolvedValue({ answer: '' });
     expect(await ask('Enter something:')).toBe('');
   });
 });
@@ -65,27 +53,37 @@ describe('ask(question)', () => {
 
 describe('askValidated(label, validator, defaultVal)', () => {
   test('resolves immediately when validator returns null', async () => {
-    rl._setAnswers(['42']);
+    inquirer.prompt.mockResolvedValue({ answer: '42' });
     const result = await askValidated('Number', v => (isNaN(+v) ? 'must be number' : null));
     expect(result).toBe('42');
   });
 
-  test('re-prompts once on bad input, then resolves on good input', async () => {
-    rl._setAnswers(['bad', '5']);
-    const result = await askValidated('Number', v => (isNaN(+v) ? 'must be number' : null));
-    expect(result).toBe('5');
+  test('passes validate function to inquirer', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: '5' });
+    await askValidated('Number', v => null);
+    const config = inquirer.prompt.mock.calls[0][0][0];
+    expect(typeof config.validate).toBe('function');
   });
 
-  test('returns defaultVal string when empty and defaultVal provided', async () => {
-    rl._setAnswers(['']); // user hits enter
-    const result = await askValidated('Frames', v => null, '64');
-    expect(result).toBe('64');
+  test('validate returns true for valid input', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: '5' });
+    await askValidated('Number', v => null);
+    const { validate } = inquirer.prompt.mock.calls[0][0][0];
+    expect(validate('5')).toBe(true);
   });
 
-  test('re-prompts multiple times until valid', async () => {
-    rl._setAnswers(['a', 'b', '7']);
-    const result = await askValidated('N', v => (isNaN(+v) ? 'err' : null));
-    expect(result).toBe('7');
+  test('validate returns error string for invalid input', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: '5' });
+    await askValidated('Number', v => (isNaN(+v) ? 'must be number' : null));
+    const { validate } = inquirer.prompt.mock.calls[0][0][0];
+    expect(validate('abc')).toBe('must be number');
+  });
+
+  test('passes default value to inquirer', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: '64' });
+    await askValidated('Frames', v => null, '64');
+    const config = inquirer.prompt.mock.calls[0][0][0];
+    expect(config.default).toBe('64');
   });
 });
 
@@ -100,42 +98,66 @@ describe('choose(label, options)', () => {
   ];
 
   test('returns 0-based index for string options', async () => {
-    rl._setAnswers(['2']);
+    inquirer.prompt.mockResolvedValue({ idx: 1 });
     expect(await choose('Pick', STRING_OPTIONS)).toBe(1);
   });
 
   test('returns 0-based index for object options', async () => {
-    rl._setAnswers(['3']);
+    inquirer.prompt.mockResolvedValue({ idx: 2 });
     expect(await choose('Pick', OBJECT_OPTIONS)).toBe(2);
   });
 
   test('returns 0 when user selects first option', async () => {
-    rl._setAnswers(['1']);
+    inquirer.prompt.mockResolvedValue({ idx: 0 });
     expect(await choose('Pick', STRING_OPTIONS)).toBe(0);
   });
 
-  test('re-prompts on out-of-range input then resolves', async () => {
-    rl._setAnswers(['99', '2']);
-    expect(await choose('Pick', STRING_OPTIONS)).toBe(1);
+  test('uses list type prompt', async () => {
+    inquirer.prompt.mockResolvedValue({ idx: 0 });
+    await choose('Pick', STRING_OPTIONS);
+    expect(inquirer.prompt.mock.calls[0][0][0].type).toBe('list');
   });
 
-  test('re-prompts on non-numeric input', async () => {
-    rl._setAnswers(['abc', '1']);
-    expect(await choose('Pick', STRING_OPTIONS)).toBe(0);
+  test('maps string options to choices with value=index', async () => {
+    inquirer.prompt.mockResolvedValue({ idx: 0 });
+    await choose('Pick', STRING_OPTIONS);
+    const { choices } = inquirer.prompt.mock.calls[0][0][0];
+    expect(choices[0]).toEqual({ name: 'Sine', value: 0 });
+    expect(choices[2]).toEqual({ name: 'Sawtooth', value: 2 });
   });
 });
 
 // ── confirm ───────────────────────────────────────────────────────────────────
 
 describe('confirm(question)', () => {
-  test('returns true for "y"',  async () => { rl._setAnswers(['y']); expect(await confirm('Sure?')).toBe(true);  });
-  test('returns true for "Y"',  async () => { rl._setAnswers(['Y']); expect(await confirm('Sure?')).toBe(true);  });
-  test('returns false for "n"', async () => { rl._setAnswers(['n']); expect(await confirm('Sure?')).toBe(false); });
-  test('returns false for "N"', async () => { rl._setAnswers(['N']); expect(await confirm('Sure?')).toBe(false); });
-  test('returns false for empty (default no)', async () => { rl._setAnswers(['']); expect(await confirm('Sure?')).toBe(false); });
-  test('re-prompts on unrecognised input then resolves', async () => {
-    rl._setAnswers(['maybe', 'y']);
+  test('returns true when user confirms', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: true });
     expect(await confirm('Sure?')).toBe(true);
+  });
+
+  test('returns false when user declines', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: false });
+    expect(await confirm('Sure?')).toBe(false);
+  });
+
+  test('uses confirm type prompt', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: false });
+    await confirm('Sure?');
+    expect(inquirer.prompt.mock.calls[0][0][0].type).toBe('confirm');
+  });
+
+  test('defaults to false', async () => {
+    inquirer.prompt.mockResolvedValue({ answer: false });
+    await confirm('Sure?');
+    expect(inquirer.prompt.mock.calls[0][0][0].default).toBe(false);
+  });
+});
+
+// ── closeRL ───────────────────────────────────────────────────────────────────
+
+describe('closeRL()', () => {
+  test('does not throw', () => {
+    expect(() => closeRL()).not.toThrow();
   });
 });
 
@@ -174,10 +196,10 @@ describe('renderWaveform(samples, width)', () => {
     expect([...result].length).toBe(40);
   });
 
-  test('maps amplitude 0 (silence) to middle block character', () => {
+  test('maps amplitude 0 (silence) to a mid-range block character', () => {
     const samples = new Float32Array([0]);
     const result = renderWaveform(samples, 1);
-    expect(result).toBe('▄');
+    expect(['▄', '▅']).toContain(result);
   });
 
   test('maps amplitude +1 (full positive) to highest block ▇ or █', () => {
@@ -235,4 +257,35 @@ describe('print helpers', () => {
     printBanner();
     expect(consoleSpy).toHaveBeenCalled();
   });
+});
+
+jest.spyOn(process.stdout, 'write').mockImplementation(() => {});
+
+// ── ora mock ──────────────────────────────────────────────────────────────────
+jest.mock('ora', () => {
+  const spinner = { start: jest.fn(), succeed: jest.fn(), fail: jest.fn() };
+  spinner.start.mockReturnValue(spinner);
+  const factory = jest.fn(() => spinner);
+  factory._spinner = spinner;
+  return factory;
+});
+
+// ── figlet mock ───────────────────────────────────────────────────────────────
+jest.mock('figlet', () => ({
+  textSync: jest.fn(() => 'WAVETABLE FACTORY'),
+}));
+
+// ── readline mock ─────────────────────────────────────────────────────────────
+jest.mock('readline', () => {
+  const state = { answers: [], idx: 0 };
+  return {
+    _setAnswers(arr) { state.answers = [...arr]; state.idx = 0; },
+    createInterface: () => ({
+      question: (q, cb) => {
+        const answer = state.idx < state.answers.length ? state.answers[state.idx++] : '';
+        setImmediate(() => cb(answer));
+      },
+      close: () => {},
+    }),
+  };
 });

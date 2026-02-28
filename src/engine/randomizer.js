@@ -2,7 +2,7 @@
 
 const { WAVEFORM_TYPES, ABLETON, COMPLEXITY_MIN, COMPLEXITY_MAX } = require('../constants');
 const { generateWavetable, morphFrames } = require('./generator');
-const { additiveWave } = require('./waveforms');
+const { additiveWave, generateFilteredNoise, generateWavefold, generateFM, generateSupersaw, normalize } = require('./waveforms');
 
 /**
  * Pick a random element from an array.
@@ -52,6 +52,30 @@ function randomizeOptions(complexity) {
 }
 
 /**
+ * Generate a single random waypoint frame for the given waveform type.
+ */
+function randomWaypoint(type, samplesPerFrame, complexity) {
+  switch (type) {
+    case 'noise':
+      return generateFilteredNoise(samplesPerFrame, Math.round(Math.random() * 4));
+    case 'wavefold':
+      return generateWavefold(samplesPerFrame, 1.5 + Math.random() * complexity * 0.6);
+    case 'fm': {
+      const ratio = 1 + Math.round(Math.random() * complexity);
+      const index = 0.5 + Math.random() * complexity * 0.8;
+      return generateFM(samplesPerFrame, ratio, Math.min(index, 10));
+    }
+    case 'supersaw': {
+      const count = 3 + Math.round(Math.random() * Math.min(complexity, 5));
+      const spread = 0.1 + Math.random() * 0.4;
+      return generateSupersaw(samplesPerFrame, count, spread);
+    }
+    default:
+      return additiveWave(randomHarmonics(complexity), samplesPerFrame);
+  }
+}
+
+/**
  * Generate a completely random wavetable using random waveform blending and morphing.
  * Each call produces a unique result.
  *
@@ -66,7 +90,7 @@ function generateRandomWavetable(complexity, frameCount, samplesPerFrame = ABLET
   // Build morph waypoints from random morph targets
   const targets = [opts.type, ...opts.morphTargets];
   const waypoints = targets.map(type =>
-    additiveWave(randomHarmonics(complexity), samplesPerFrame)
+    randomWaypoint(type, samplesPerFrame, complexity)
   );
 
   if (waypoints.length === 1 || frameCount === 1) {

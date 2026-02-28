@@ -108,6 +108,83 @@ function normalize(samples) {
   return out;
 }
 
+/**
+ * Smoothed white noise — one loopable cycle.
+ * passes controls how many rounds of circular averaging are applied:
+ * 1 = grainy/gritty, 5 = silky smooth.
+ * @param {number} length
+ * @param {number} passes - smoothing iterations (default 2)
+ * @returns {Float32Array}
+ */
+function generateFilteredNoise(length, passes = 2) {
+  const samples = new Float32Array(length);
+  for (let i = 0; i < length; i++) samples[i] = Math.random() * 2 - 1;
+  for (let p = 0; p < passes; p++) {
+    const tmp = new Float32Array(length);
+    for (let i = 0; i < length; i++) {
+      const prev = (i - 1 + length) % length;
+      const next = (i + 1) % length;
+      tmp[i] = (samples[prev] + samples[i] + samples[next]) / 3;
+    }
+    samples.set(tmp);
+  }
+  return normalize(samples);
+}
+
+/**
+ * Wavefolder — sine folded back on itself to add harmonics.
+ * drive 1.5 = subtle, 6.0 = aggressive.
+ * @param {number} length
+ * @param {number} drive - fold intensity (default 3.0)
+ * @returns {Float32Array}
+ */
+function generateWavefold(length, drive = 3.0) {
+  const samples = new Float32Array(length);
+  for (let i = 0; i < length; i++) {
+    let v = Math.sin(TWO_PI * i / length) * drive;
+    // Reflect v into [-1, 1] using triangle-wave folding
+    v = v - 2 * Math.floor((v + 1) / 2);
+    if (v < -1) v = -2 - v;
+    samples[i] = v;
+  }
+  return normalize(samples);
+}
+
+/**
+ * FM synthesis — one modulator shaping one carrier.
+ * @param {number} length
+ * @param {number} ratio  - modulator:carrier frequency ratio (default 2)
+ * @param {number} index  - modulation index / depth (default 3)
+ * @returns {Float32Array}
+ */
+function generateFM(length, ratio = 2, index = 3) {
+  const samples = new Float32Array(length);
+  for (let i = 0; i < length; i++) {
+    const mod = index * Math.sin(TWO_PI * ratio * i / length);
+    samples[i] = Math.sin(TWO_PI * i / length + mod);
+  }
+  return normalize(samples);
+}
+
+/**
+ * Supersaw — multiple phase-offset sawtooth waves summed.
+ * @param {number} length
+ * @param {number} count  - number of saw voices (default 5)
+ * @param {number} spread - phase spread per voice 0–1 (default 0.25)
+ * @returns {Float32Array}
+ */
+function generateSupersaw(length, count = 5, spread = 0.25) {
+  const samples = new Float32Array(length);
+  for (let v = 0; v < count; v++) {
+    const offset = count === 1 ? 0 : (v / (count - 1) - 0.5) * spread;
+    for (let i = 0; i < length; i++) {
+      const phase = ((i / length) + offset + 1) % 1;
+      samples[i] += 2 * phase - 1;
+    }
+  }
+  return normalize(samples);
+}
+
 module.exports = {
   generateSine,
   generateSawtooth,
@@ -115,5 +192,9 @@ module.exports = {
   generateTriangle,
   generatePulse,
   additiveWave,
+  generateFilteredNoise,
+  generateWavefold,
+  generateFM,
+  generateSupersaw,
   normalize,
 };

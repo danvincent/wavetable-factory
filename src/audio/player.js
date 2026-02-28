@@ -129,14 +129,70 @@ function getWindow(frames, position, windowSize) {
   return out;
 }
 
-// ── Playback (ffplay stdin pipe) ──────────────────────────────────────────────
-
-let ffplayProcess = null;
-let currentSamples = null;
-let loopRunning = false;
+// ── Phase-accumulator synthesis ───────────────────────────────────────────────
 
 /**
- * Convert Float32Array to Int16 Buffer for ffplay (s16le).
+ * Synthesize audio from wavetable frames at a target musical pitch.
+ *
+ * A wavetable frame represents ONE cycle of a waveform. The synth reads through
+ * the frame using a phase accumulator that advances by (freq / sampleRate) per
+ * output sample, wrapping at 1.0 — this plays the waveform at the correct pitch
+ * regardless of how many samples are in the frame.
+ *
+ * When windowSize > 1, the synth slowly morphs through consecutive frames,
+ * completing one pass through the window over `durationSec` seconds.
+ *
+ * @param {Float32Array[]} frames      - All wavetable frames
+ * @param {number}         position    - 0.0–1.0, which frame to start at
+ * @param {number}         windowSize  - How many frames to scan through
+ * @param {number}         freq        - Target frequency in Hz (e.g. 261.63 for middle C)
+ * @param {number}         sampleRate  - Output sample rate (e.g. 44100)
+ * @param {number}         durationSec - Output duration in seconds
+ * @returns {Float32Array}
+ */
+function synthesize(frames, position, windowSize, freq, sampleRate, durationSec) {
+  const totalFrames = frames.length;
+  const maxStart = Math.max(0, totalFrames - windowSize);
+  const startFrame = Math.round(positionClamp(position) * maxStart);
+  const endFrame = Math.min(totalFrames, startFrame + windowSizeClamp(windowSize, totalFrames));
+  const frameSlice = frames.slice(startFrame, endFrame);
+
+  const numOutputSamples = Math.round(sampleRate * durationSec);
+  const output = new Float32Array(numOutputSamples);
+  const phaseIncrement = freq / sampleRate;
+  let phase = 0;
+
+  for (let i = 0; i < numOutputSamples; i++) {
+    // Slowly morph through frame window over the full duration
+    const windowPhase = frameSlice.length <= 1 ? 0 : i / (numOutputSamples - 1);
+    const frameIdx = Math.min(frameSlice.length - 1, Math.floor(windowPhase * frameSlice.length));
+    const frame = frameSlice[frameIdx];
+    const samplesPerFrame = frame.length;
+
+    // Linear interpolation between adjacent samples for smooth reads
+    const rawIdx = phase * samplesPerFrame;
+    const idx0 = Math.floor(rawIdx) % samplesPerFrame;
+    const idx1 = (idx0 + 1) % samplesPerFrame;
+    const frac = rawIdx - Math.floor(rawIdx);
+    output[i] = frame[idx0] * (1 - frac) + frame[idx1] * frac;
+
+    phase += phaseIncrement;
+    if (phase >= 1) phase -= Math.floor(phase);
+  }
+
+  return output;
+}
+
+
+const os = require('os');
+const path = require('path');
+
+let ffplayProcess = null;
+const TEMP_WAV = path.join(os.tmpdir(), 'wavetable-factory-preview.wav');
+const PREVIEW_DURATION_SEC = 10;
+
+/**
+ * Convert Float32Array to Int16 Buffer.
  * @param {Float32Array} samples
  * @returns {Buffer}
  */
@@ -153,64 +209,76 @@ function toInt16Buffer(samples) {
 }
 
 /**
- * Write one loop iteration to ffplay stdin, then schedule next.
- */
-function writeLoop() {
-  if (!loopRunning || !ffplayProcess || ffplayProcess.stdin.destroyed) {
-    loopRunning = false;
-    return;
-  }
-  const buf = toInt16Buffer(currentSamples);
-  ffplayProcess.stdin.write(buf, () => {
-    if (loopRunning) writeLoop();
-  });
-}
-
-/**
- * Start gapless looped playback by piping raw 16-bit PCM to ffplay stdin.
- * @param {Float32Array} samples - initial sample window
+ * Write synthesized samples to a temporary WAV file and play it with ffplay.
+ * Uses -loop 0 so ffplay loops the file indefinitely until killed.
+ * This avoids any stdin-pipe tight-loop CPU issue.
+ *
+ * @param {Float32Array} samples
  * @param {number} sampleRate
  */
 function startPlayback(samples, sampleRate) {
   stopPlayback();
-  currentSamples = samples;
-  ffplayProcess = spawn('ffplay', [
-    '-f', 's16le',
-    '-ar', String(sampleRate),
-    '-ac', '1',
-    '-nodisp',
-    '-i', 'pipe:0',
-  ], { stdio: ['pipe', 'ignore', 'ignore'] });
 
-  ffplayProcess.on('error', () => { loopRunning = false; });
-  loopRunning = true;
-  writeLoop();
+  // Write 16-bit PCM WAV to temp file
+  const pcm = toInt16Buffer(samples);
+  const HEADER_SIZE = 44;
+  const wavBuf = Buffer.alloc(HEADER_SIZE + pcm.length);
+
+  const dataSize  = pcm.length;
+  const fileSize  = 36 + dataSize;
+  const byteRate  = sampleRate * 2; // 1 channel, 16-bit
+  wavBuf.write('RIFF', 0, 'ascii');
+  wavBuf.writeUInt32LE(fileSize, 4);
+  wavBuf.write('WAVE', 8, 'ascii');
+  wavBuf.write('fmt ', 12, 'ascii');
+  wavBuf.writeUInt32LE(16, 16);
+  wavBuf.writeUInt16LE(1, 20);              // PCM
+  wavBuf.writeUInt16LE(1, 22);              // mono
+  wavBuf.writeUInt32LE(sampleRate, 24);
+  wavBuf.writeUInt32LE(byteRate, 28);
+  wavBuf.writeUInt16LE(2, 32);              // block align
+  wavBuf.writeUInt16LE(16, 34);             // bits per sample
+  wavBuf.write('data', 36, 'ascii');
+  wavBuf.writeUInt32LE(dataSize, 40);
+  pcm.copy(wavBuf, HEADER_SIZE);
+
+  fs.writeFileSync(TEMP_WAV, wavBuf);
+
+  ffplayProcess = spawn('ffplay', [
+    '-nodisp',
+    '-autoexit',
+    '-loop', '0',
+    TEMP_WAV,
+  ], { stdio: 'ignore' });
+
+  ffplayProcess.on('error', () => { ffplayProcess = null; });
 }
 
 /**
- * Update the sample buffer being looped without restarting ffplay.
+ * Re-generate the temp WAV with updated samples and restart ffplay.
+ * Call this when position/window changes during playback.
  * @param {Float32Array} samples
+ * @param {number} sampleRate
  */
-function updatePlaybackWindow(samples) {
-  currentSamples = samples;
+function updatePlaybackWindow(samples, sampleRate) {
+  if (ffplayProcess) {
+    startPlayback(samples, sampleRate);
+  }
 }
 
 /**
  * Stop playback and kill ffplay process.
  */
 function stopPlayback() {
-  loopRunning = false;
   if (ffplayProcess) {
-    try {
-      ffplayProcess.stdin.end();
-      ffplayProcess.kill();
-    } catch (_) { /* process may already be dead */ }
+    try { ffplayProcess.kill(); } catch (_) { /* already dead */ }
     ffplayProcess = null;
   }
 }
 
 module.exports = {
   loadWavetable,
+  synthesize,
   getWindow,
   positionClamp,
   windowSizeClamp,

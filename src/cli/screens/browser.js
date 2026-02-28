@@ -3,21 +3,9 @@
 const path = require('path');
 const fs   = require('fs-extra');
 
-const { ask, printHeader, printSuccess, printError, printInfo, hr } = require('../prompt');
+const { choose, ask, confirm, printHeader, printSuccess, printError, printInfo, hr } = require('../prompt');
 const { scanLibrary } = require('../../library/scanner');
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function displayList(files) {
-  if (files.length === 0) {
-    printInfo('  (no wavetables found)');
-    return;
-  }
-  files.forEach((f, i) => {
-    const rel = f.relativePath || path.basename(f.path);
-    printInfo(`  ${i + 1}) ${rel}`);
-  });
-}
+const { playerMenu }  = require('./player');
 
 // ── Action menu for a selected file ──────────────────────────────────────────
 
@@ -25,21 +13,25 @@ async function fileMenu(file) {
   while (true) {
     hr();
     printInfo(`Selected: ${path.basename(file.path)}`);
-    printInfo('  r) Rename');
-    printInfo('  d) Delete');
-    printInfo('  0) Back');
-    hr();
-    const sel = await ask('Action');
-    if (sel === '0') break;
 
-    if (sel === 'r' || sel === 'R') {
+    const ACTION_OPTIONS = ['Play', 'Rename', 'Delete', 'Back'];
+    const action = await choose('Action', ACTION_OPTIONS);
+
+    if (action === 3) break; // Back
+
+    if (action === 0) { // Play
+      await playerMenu(file.path);
+      break;
+    }
+
+    if (action === 1) { // Rename
       const newName = await ask('New filename (without extension)');
       if (!newName || !newName.trim()) {
         printError('Name cannot be empty.');
         continue;
       }
-      const dir = path.dirname(file.path);
-      const ext = path.extname(file.path);
+      const dir     = path.dirname(file.path);
+      const ext     = path.extname(file.path);
       const newPath = path.join(dir, newName.trim() + ext);
       try {
         await fs.rename(file.path, newPath);
@@ -51,9 +43,9 @@ async function fileMenu(file) {
       break;
     }
 
-    if (sel === 'd' || sel === 'D') {
-      const confirm = await ask(`Delete "${path.basename(file.path)}"? (y/N)`);
-      if (confirm.toLowerCase() === 'y') {
+    if (action === 2) { // Delete
+      const ok = await confirm(`Delete "${path.basename(file.path)}"?`);
+      if (ok) {
         try {
           await fs.unlink(file.path);
           printSuccess('Deleted.');
@@ -66,8 +58,6 @@ async function fileMenu(file) {
       }
       break;
     }
-
-    printError('Unknown action. Enter r, d, or 0.');
   }
   return false;
 }
@@ -85,22 +75,23 @@ async function browserMenu(config) {
     }
 
     const files = await scanLibrary(libraryPath);
-    displayList(files);
-    hr();
-    printInfo(`  0) Back`);
-    hr();
 
-    const sel = await ask('Select a wavetable');
-    if (sel === '0') break;
-
-    const idx = parseInt(sel, 10) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= files.length) {
-      printError('Invalid selection.');
-      continue;
+    if (files.length === 0) {
+      printInfo('(no wavetables found)');
+      const back = await choose('', ['Back']);
+      break;
     }
 
-    await fileMenu(files[idx]);
+    const fileChoices = [
+      ...files.map(f => f.relativePath || path.basename(f.path)),
+      'Back',
+    ];
+    const sel = await choose('Select a wavetable', fileChoices);
+
+    if (sel === files.length) break; // Back
+
+    await fileMenu(files[sel]);
   }
 }
 
-module.exports = { browserMenu, fileMenu, displayList };
+module.exports = { browserMenu, fileMenu };

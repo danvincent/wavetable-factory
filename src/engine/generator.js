@@ -7,6 +7,10 @@ const {
   generateTriangle,
   generatePulse,
   additiveWave,
+  generateFilteredNoise,
+  generateWavefold,
+  generateFM,
+  generateSupersaw,
   normalize,
 } = require('./waveforms');
 
@@ -54,7 +58,34 @@ function generateFrame(type, samplesPerFrame, complexity, harmonicShift = 0) {
   if (type === 'triangle' && complexity <= 1) return generateTriangle(samplesPerFrame);
   if (type === 'pulse') return generatePulse(samplesPerFrame);
 
-  // For additive and complex versions of other types, use additive synthesis
+  // New generator types — parameters scale with complexity and harmonicShift (0–1 morph position)
+  if (type === 'noise') {
+    // passes: complexity 1 = 4 (smooth), complexity 10 = 0 (raw white noise)
+    const passes = Math.round(4 - harmonicShift * 4 * (complexity / 10));
+    return generateFilteredNoise(samplesPerFrame, Math.max(0, passes));
+  }
+
+  if (type === 'wavefold') {
+    // drive: 1.5 at low complexity, up to 6.0 at high; morphs from subtle to aggressive
+    const drive = 1.5 + harmonicShift * (1 + complexity * 0.5);
+    return generateWavefold(samplesPerFrame, Math.min(drive, 7.0));
+  }
+
+  if (type === 'fm') {
+    // ratio and index both scale with complexity and shift
+    const ratio = 1 + Math.round(harmonicShift * complexity);
+    const index = 0.5 + harmonicShift * complexity * 0.8;
+    return generateFM(samplesPerFrame, Math.max(1, ratio), Math.min(index, 10));
+  }
+
+  if (type === 'supersaw') {
+    // spread widens with complexity; voice count grows with shift
+    const count = 3 + Math.round(harmonicShift * Math.min(complexity, 7));
+    const spread = 0.1 + harmonicShift * (complexity / 10) * 0.5;
+    return generateSupersaw(samplesPerFrame, count, spread);
+  }
+
+  // For additive and complex versions of basic types, use additive synthesis
   const harmonics = buildHarmonics(type === 'additive' ? 'sawtooth' : type, complexity);
   // Apply harmonic shift by rotating amplitudes — creates morphing effect
   if (harmonicShift > 0 && harmonics.length > 1) {
