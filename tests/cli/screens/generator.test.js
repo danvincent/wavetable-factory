@@ -154,9 +154,10 @@ describe('generatorMenu(config)', () => {
     exportForAbleton.mockRejectedValueOnce(new Error('disk full'));
     ask
       .mockResolvedValueOnce('1')
-      .mockResolvedValueOnce('')
-      .mockResolvedValueOnce('')
-      .mockResolvedValueOnce('0');
+      .mockResolvedValueOnce('')    // complexity
+      .mockResolvedValueOnce('')    // frame count
+      .mockResolvedValueOnce('')    // Enter to continue
+      .mockResolvedValueOnce('0'); // back
     choose.mockResolvedValueOnce(0);
 
     await generatorMenu(MOCK_CONFIG);

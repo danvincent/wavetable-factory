@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 'use strict';
 
-const { createApp } = require('../src/tui/app');
+const config = require('../src/config');
+const { mainMenu } = require('../src/cli/menu');
+const { closeRL } = require('../src/cli/prompt');
 
-createApp().start();
+mainMenu(config).then(() => closeRL()).catch(err => {
+  console.error(err);
+  closeRL();
+  process.exit(1);
+});
