@@ -1,0 +1,28 @@
+{
+  "name": "wavetable-factory",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node bin/wavetable-factory.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.js tests/**/*.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Wavetable synthesis and library management tool for Ableton Live and Polyend Tracker",
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "fs-extra": "^11.3.3",
+    "wav": "^1.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.3",
+    "jest": "^30.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
