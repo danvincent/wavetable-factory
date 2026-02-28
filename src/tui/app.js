@@ -4,6 +4,11 @@ const blessed = require('blessed');
 const { createLayout, SIDEBAR_ITEMS } = require('./layout');
 const { registerGlobalKeys, SCREEN_ORDER } = require('./keybindings');
 const { createScreenRegistry } = require('./screens/index');
+const config = require('../config');
+const { createGeneratorScreen } = require('./screens/generator');
+const { createBrowserScreen } = require('./screens/browser');
+const { createPlayerScreen } = require('./screens/player');
+const { createSettingsScreen } = require('./screens/settings');
 
 /**
  * Create the main application instance.
@@ -19,6 +24,25 @@ function createApp() {
 
   const { sidebar, content } = createLayout(screen);
   const registry = createScreenRegistry(content);
+  const settings = config.load();
+
+  // Build all real screens and register them
+  const generatorContainer = createGeneratorScreen(content, settings);
+  registry.register('generator', generatorContainer);
+
+  const playerScreen = createPlayerScreen(content);
+  registry.register('player', playerScreen.container);
+
+  const browserContainer = createBrowserScreen(content, settings, {
+    onLoadPlayer: (filePath) => {
+      navigate('player');
+      playerScreen.loadFile(filePath);
+    },
+  });
+  registry.register('browser', browserContainer);
+
+  const settingsScreen = createSettingsScreen(content, config);
+  registry.register('settings', settingsScreen.container);
 
   let currentScreen = 'generator';
   let currentSidebarIndex = 0;

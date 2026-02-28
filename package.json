@@ -2,6 +2,9 @@
   "name": "wavetable-factory",
   "version": "1.0.0",
   "main": "src/index.js",
+  "bin": {
+    "wavetable-factory": "bin/wavetable-factory.js"
+  },
   "scripts": {
     "start": "node bin/wavetable-factory.js",
     "test": "jest",
