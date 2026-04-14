@@ -102,7 +102,7 @@ async function exportForAbleton(frames, outputPath) {
   }
 
   await fs.ensureDir(require('path').dirname(outputPath));
-  await fs.writeFile(outputPath, buf);
+  await fs.writeFile(outputPath, buf, { flag: 'wx' });
 }
 
 /**
@@ -142,7 +142,7 @@ async function exportForPolyend(frames, outputPath) {
   }
 
   await fs.ensureDir(require('path').dirname(outputPath));
-  await fs.writeFile(outputPath, buf);
+  await fs.writeFile(outputPath, buf, { flag: 'wx' });
 }
 
 /**
@@ -162,7 +162,7 @@ async function exportForPirateSynthWt(frames, outputPath) {
   const content = lines.join('\n') + '\n';
 
   await fs.ensureDir(require('path').dirname(outputPath));
-  await fs.writeFile(outputPath, content, 'utf8');
+  await fs.writeFile(outputPath, content, { encoding: 'utf8', flag: 'wx' });
 }
 
 module.exports = {
