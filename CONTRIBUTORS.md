@@ -2,4 +2,4 @@
 
 Thanks to everyone who has contributed to this project.
 
-- danvincent <fakemoonlandings@gmail.com>
+- danvincent
