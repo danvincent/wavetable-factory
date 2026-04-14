@@ -25,13 +25,13 @@ jest.mock('../../../src/engine/randomizer', () => ({
 jest.mock('../../../src/engine/exporter', () => ({
   exportForAbleton: jest.fn(() => Promise.resolve()),
   exportForPolyend: jest.fn(() => Promise.resolve()),
-  exportForPirateSynthWt: jest.fn(() => Promise.resolve()),
+  exportForGenericTxt: jest.fn(() => Promise.resolve()),
 }));
 
 const { parseFormValues, buildFilename, onGenerate, onGenerateRandom } = require('../../../src/tui/screens/generator');
 const { generateWavetable } = require('../../../src/engine/generator');
 const { generateRandomWavetable } = require('../../../src/engine/randomizer');
-const { exportForAbleton, exportForPolyend, exportForPirateSynthWt } = require('../../../src/engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForGenericTxt } = require('../../../src/engine/exporter');
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -140,9 +140,9 @@ describe('onGenerate(options, libraryPath)', () => {
     expect(exportForPolyend).toHaveBeenCalled();
   });
 
-  test('calls exportForPirateSynthWt when target is txt', async () => {
+  test('calls exportForGenericTxt when target is txt', async () => {
     await onGenerate({ ...opts, target: 'txt' }, libPath);
-    expect(exportForPirateSynthWt).toHaveBeenCalled();
+    expect(exportForGenericTxt).toHaveBeenCalled();
     expect(exportForAbleton).not.toHaveBeenCalled();
     expect(exportForPolyend).not.toHaveBeenCalled();
   });
@@ -151,7 +151,7 @@ describe('onGenerate(options, libraryPath)', () => {
     await onGenerate({ ...opts, target: 'all' }, libPath);
     expect(exportForAbleton).toHaveBeenCalled();
     expect(exportForPolyend).toHaveBeenCalled();
-    expect(exportForPirateSynthWt).toHaveBeenCalled();
+    expect(exportForGenericTxt).toHaveBeenCalled();
   });
 
   test('calls only exportForAbleton when target is ableton', async () => {
@@ -216,7 +216,7 @@ describe('onGenerateRandom(complexity, frameCount, libraryPath)', () => {
 
   test('random export includes Generic TXT output', async () => {
     await onGenerateRandom(5, 32, libPath);
-    expect(exportForPirateSynthWt).toHaveBeenCalled();
+    expect(exportForGenericTxt).toHaveBeenCalled();
   });
 
   test('returns error result on failure', async () => {

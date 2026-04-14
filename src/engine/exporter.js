@@ -171,7 +171,7 @@ async function exportForPolyend(frames, outputPath) {
  * @param {string} outputPath
  * @returns {Promise<void>}
  */
-async function exportForPirateSynthWt(frames, outputPath) {
+async function exportForGenericTxt(frames, outputPath) {
   assertSafeOutputPath(outputPath);
 
   const samples = flattenFrames(frames);
@@ -192,5 +192,5 @@ module.exports = {
   convertTo16Bit,
   exportForAbleton,
   exportForPolyend,
-  exportForPirateSynthWt,
+  exportForGenericTxt,
 };

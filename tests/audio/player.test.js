@@ -1,6 +1,5 @@
 'use strict';
 
-const os = require('os');
 const path = require('path');
 const fs = require('fs-extra');
 
@@ -25,7 +24,7 @@ const {
 } = require('../../src/audio/player');
 const { exportForAbleton, exportForPolyend } = require('../../src/engine/exporter');
 
-const TMP_DIR = path.join(os.tmpdir(), 'wf-player-test-' + process.pid);
+const TMP_DIR = path.join(__dirname, '..', '..', 'tmp', 'wf-player-test-' + process.pid);
 
 beforeAll(async () => {
   fs.ensureDirSync(TMP_DIR);

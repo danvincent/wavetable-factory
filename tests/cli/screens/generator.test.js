@@ -5,7 +5,7 @@ jest.mock('../../../src/engine/randomizer', () => ({ generateRandomWavetable: je
 jest.mock('../../../src/engine/exporter',   () => ({
   exportForAbleton: jest.fn().mockResolvedValue(undefined),
   exportForPolyend: jest.fn().mockResolvedValue(undefined),
-  exportForPirateSynthWt: jest.fn().mockResolvedValue(undefined),
+  exportForGenericTxt: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('fs-extra', () => ({ ensureDir: jest.fn().mockResolvedValue(undefined) }));
 
@@ -23,7 +23,7 @@ jest.mock('../../../src/cli/prompt', () => ({
 const { choose, ask, askValidated, printSuccess, printError } = require('../../../src/cli/prompt');
 const { generateWavetable }      = require('../../../src/engine/generator');
 const { generateRandomWavetable } = require('../../../src/engine/randomizer');
-const { exportForAbleton, exportForPolyend, exportForPirateSynthWt } = require('../../../src/engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForGenericTxt } = require('../../../src/engine/exporter');
 const { generatorMenu, generateName }        = require('../../../src/cli/screens/generator');
 
 const FAKE_FRAMES = [new Float32Array(2048)];
@@ -167,7 +167,7 @@ describe('generatorMenu(config)', () => {
     ask.mockResolvedValueOnce('');
 
     await generatorMenu(MOCK_CONFIG);
-    expect(exportForPirateSynthWt).toHaveBeenCalled();
+    expect(exportForGenericTxt).toHaveBeenCalled();
     expect(exportForAbleton).not.toHaveBeenCalled();
     expect(exportForPolyend).not.toHaveBeenCalled();
   });
@@ -185,7 +185,7 @@ describe('generatorMenu(config)', () => {
     await generatorMenu(MOCK_CONFIG);
     expect(exportForAbleton).toHaveBeenCalled();
     expect(exportForPolyend).toHaveBeenCalled();
-    expect(exportForPirateSynthWt).toHaveBeenCalled();
+    expect(exportForGenericTxt).toHaveBeenCalled();
   });
 
   test('uses custom complexity', async () => {

@@ -42,7 +42,7 @@ async function deleteFile(filePath) {
 async function ensureSubfolders(libraryPath) {
   await fs.ensureDir(path.join(libraryPath, SUBFOLDER_NAMES.ABLETON));
   await fs.ensureDir(path.join(libraryPath, SUBFOLDER_NAMES.POLYEND));
-  await fs.ensureDir(path.join(libraryPath, SUBFOLDER_NAMES.PIRATE));
+  await fs.ensureDir(path.join(libraryPath, SUBFOLDER_NAMES.TXT));
 }
 
 module.exports = { renameFile, deleteFile, ensureSubfolders };

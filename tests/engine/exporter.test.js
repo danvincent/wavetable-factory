@@ -1,17 +1,16 @@
 'use strict';
 
-const os = require('os');
 const path = require('path');
 const fs = require('fs-extra');
 const {
   exportForAbleton,
   exportForPolyend,
-  exportForPirateSynthWt,
+  exportForGenericTxt,
   convertTo16Bit,
   flattenFrames,
 } = require('../../src/engine/exporter');
 
-const TMP_DIR = path.join(os.tmpdir(), 'wf-exporter-test-' + process.pid);
+const TMP_DIR = path.join(__dirname, '..', '..', 'tmp', 'wf-exporter-test-' + process.pid);
 
 // Build a minimal set of frames for testing
 function makeFrames(frameCount, samplesPerFrame, value = 0.5) {
@@ -181,24 +180,24 @@ describe('exportForPolyend(frames, outputPath)', () => {
   });
 });
 
-describe('exportForPirateSynthWt(frames, outputPath)', () => {
+describe('exportForGenericTxt(frames, outputPath)', () => {
   test('creates a .txt text file on disk', async () => {
-    const outPath = path.join(TMP_DIR, 'pirate-test.txt');
-    await exportForPirateSynthWt(makeFrames(2, 8, 0.25), outPath);
+    const outPath = path.join(TMP_DIR, 'generic-txt-test.txt');
+    await exportForGenericTxt(makeFrames(2, 8, 0.25), outPath);
     expect(fs.existsSync(outPath)).toBe(true);
   });
 
   test('writes one numeric sample per line', async () => {
-    const outPath = path.join(TMP_DIR, 'pirate-lines.txt');
-    await exportForPirateSynthWt(makeFrames(2, 8, 0.25), outPath);
+    const outPath = path.join(TMP_DIR, 'generic-txt-lines.txt');
+    await exportForGenericTxt(makeFrames(2, 8, 0.25), outPath);
     const lines = fs.readFileSync(outPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(16);
     expect(lines[0]).toMatch(/^-?\d+\.\d+$/);
   });
 
   test('clamps out-of-range values to [-1, 1]', async () => {
-    const outPath = path.join(TMP_DIR, 'pirate-clamp.txt');
-    await exportForPirateSynthWt([new Float32Array([2, -2, 0.5])], outPath);
+    const outPath = path.join(TMP_DIR, 'generic-txt-clamp.txt');
+    await exportForGenericTxt([new Float32Array([2, -2, 0.5])], outPath);
     const lines = fs.readFileSync(outPath, 'utf8').trim().split('\n');
     expect(lines).toEqual(['1.000000', '-1.000000', '0.500000']);
   });

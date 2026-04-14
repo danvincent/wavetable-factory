@@ -6,7 +6,7 @@ const fs   = require('fs-extra');
 const { choose, askValidated, ask, printHeader, printSuccess, printError, printInfo, hr } = require('../prompt');
 const { generateWavetable } = require('../../engine/generator');
 const { generateRandomWavetable } = require('../../engine/randomizer');
-const { exportForAbleton, exportForPolyend, exportForPirateSynthWt } = require('../../engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForGenericTxt } = require('../../engine/exporter');
 const {
   WAVEFORM_TYPES, ABLETON, POLYEND, SUBFOLDER_NAMES,
   COMPLEXITY_MIN, COMPLEXITY_MAX, COMPLEXITY_DEFAULT,
@@ -42,7 +42,7 @@ function generateName() {
 async function saveWavetable(frames, name, target, libraryPath) {
   const abletonDir = path.join(libraryPath, SUBFOLDER_NAMES.ABLETON);
   const polyendDir = path.join(libraryPath, SUBFOLDER_NAMES.POLYEND);
-  const pirateDir = path.join(libraryPath, SUBFOLDER_NAMES.PIRATE);
+  const txtDir = path.join(libraryPath, SUBFOLDER_NAMES.TXT);
   const saved = [];
 
   if (target === TARGET.ABLETON || target === TARGET.BOTH || target === TARGET.ALL) {
@@ -57,10 +57,10 @@ async function saveWavetable(frames, name, target, libraryPath) {
     await exportForPolyend(frames, out);
     saved.push(out);
   }
-  if (target === TARGET.PIRATE || target === TARGET.ALL) {
-    await fs.ensureDir(pirateDir);
-    const out = path.join(pirateDir, `${name}.txt`);
-    await exportForPirateSynthWt(frames, out);
+  if (target === TARGET.TXT || target === TARGET.ALL) {
+    await fs.ensureDir(txtDir);
+    const out = path.join(txtDir, `${name}.txt`);
+    await exportForGenericTxt(frames, out);
     saved.push(out);
   }
   return saved;
@@ -83,7 +83,7 @@ const TARGET_OPTIONS = [
 const TARGET = {
   ABLETON: 0,
   POLYEND: 1,
-  PIRATE: 2,
+  TXT: 2,
   BOTH: 3,
   ALL: 4,
 };

@@ -5,9 +5,10 @@ const blessed = require('blessed');
 const { WAVEFORM_TYPES, ABLETON, COMPLEXITY_MIN, COMPLEXITY_MAX } = require('../../constants');
 const { generateWavetable } = require('../../engine/generator');
 const { generateRandomWavetable } = require('../../engine/randomizer');
-const { exportForAbleton, exportForPolyend, exportForPirateSynthWt } = require('../../engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForGenericTxt } = require('../../engine/exporter');
 
 const VALID_TARGETS = ['ableton', 'polyend', 'txt', 'both', 'all'];
+const TARGET_LABELS  = ['Ableton Live', 'Polyend Tracker', 'Generic TXT (.txt)', 'Both (Ableton + Polyend)', 'All (Ableton + Polyend + Generic TXT)'];
 
 // ── Pure logic ───────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ async function onGenerate(options, libraryPath) {
     }
     if (options.target === 'txt' || options.target === 'all') {
       const outPath = path.join(libraryPath, 'txt', filename.replace(/\.wav$/i, '.txt'));
-      await exportForPirateSynthWt(frames, outPath);
+      await exportForGenericTxt(frames, outPath);
       filePaths.push(outPath);
     }
 
@@ -112,9 +113,9 @@ async function onGenerateRandom(complexity, frameCount, libraryPath) {
     await exportForPolyend(frames, polyendPath);
     filePaths.push(polyendPath);
 
-    const piratePath = path.join(libraryPath, 'txt', filename.replace(/\.wav$/i, '.txt'));
-    await exportForPirateSynthWt(frames, piratePath);
-    filePaths.push(piratePath);
+    const txtPath = path.join(libraryPath, 'txt', filename.replace(/\.wav$/i, '.txt'));
+    await exportForGenericTxt(frames, txtPath);
+    filePaths.push(txtPath);
 
     return { success: true, filePaths };
   } catch (err) {
@@ -179,10 +180,10 @@ function createGeneratorScreen(panel, config) {
   // ── Target selector ────────────────────────────────────────────────────────
   blessed.text({ parent: container, top: 6, left: FORM_LEFT, content: 'Export Target:' });
   const targetList = blessed.list({
-    parent: container, top: 7, left: FORM_LEFT, width: 22, height: VALID_TARGETS.length + 2,
+    parent: container, top: 7, left: FORM_LEFT, width: 30, height: VALID_TARGETS.length + 2,
     label: ' Target ', border: { type: 'line' },
     style: { selected: { bg: 'blue' }, border: { fg: 'cyan' } },
-    items: VALID_TARGETS, keys: true, mouse: true,
+    items: TARGET_LABELS, keys: true, mouse: true,
   });
   targetList.select(VALID_TARGETS.indexOf(state.target));
   targetList.on('select item', (_, idx) => { state.target = VALID_TARGETS[idx]; });
@@ -257,4 +258,5 @@ module.exports = {
   onGenerateRandom,
   createGeneratorScreen,
   VALID_TARGETS,
+  TARGET_LABELS,
 };
