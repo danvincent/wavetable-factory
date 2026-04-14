@@ -242,4 +242,8 @@ The player writes 10 seconds of synthesised audio to a temp file (`/tmp/wavetabl
 
 ## License
 
-ISC
+MIT — see [`LICENSE`](./LICENSE).
+
+## Contributors
+
+See [`CONTRIBUTORS.md`](./CONTRIBUTORS.md).

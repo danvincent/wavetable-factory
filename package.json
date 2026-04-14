@@ -14,7 +14,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "Wavetable synthesis and library management tool for Ableton Live and Polyend Tracker",
   "dependencies": {
     "blessed": "^0.1.81",
