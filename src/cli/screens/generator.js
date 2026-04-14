@@ -59,7 +59,7 @@ async function saveWavetable(frames, name, target, libraryPath) {
   }
   if (target === TARGET.PIRATE || target === TARGET.ALL) {
     await fs.ensureDir(pirateDir);
-    const out = path.join(pirateDir, `${name}.wt`);
+    const out = path.join(pirateDir, `${name}.txt`);
     await exportForPirateSynthWt(frames, out);
     saved.push(out);
   }
@@ -76,9 +76,9 @@ const BACK_IDX   = GENERATOR_OPTIONS.indexOf('Back');
 const TARGET_OPTIONS = [
   'Ableton Live (32-bit float WAV)',
   'Polyend Tracker (16-bit PCM WAV)',
-  'pirate-synth (.wt text, not Bitwig/Surge .wt binary)',
+  'pirate-synth (text .txt)',
   'Both (Ableton + Polyend)',
-  'All (Ableton + Polyend + pirate-synth .wt)',
+  'All (Ableton + Polyend + pirate-synth .txt)',
 ];
 const TARGET = {
   ABLETON: 0,

@@ -214,7 +214,7 @@ describe('onGenerateRandom(complexity, frameCount, libraryPath)', () => {
     expect(result.filePaths).toBeDefined();
   });
 
-  test('random export includes pirate .wt output', async () => {
+  test('random export includes pirate .txt output', async () => {
     await onGenerateRandom(5, 32, libPath);
     expect(exportForPirateSynthWt).toHaveBeenCalled();
   });

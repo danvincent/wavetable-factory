@@ -156,7 +156,7 @@ describe('generatorMenu(config)', () => {
     expect(exportForAbleton).not.toHaveBeenCalled();
   });
 
-  test('exports pirate-synth .wt when target=pirate-synth', async () => {
+  test('exports pirate-synth .txt when target=pirate-synth', async () => {
     choose
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(2)

@@ -182,14 +182,14 @@ describe('exportForPolyend(frames, outputPath)', () => {
 });
 
 describe('exportForPirateSynthWt(frames, outputPath)', () => {
-  test('creates a .wt text file on disk', async () => {
-    const outPath = path.join(TMP_DIR, 'pirate-test.wt');
+  test('creates a .txt text file on disk', async () => {
+    const outPath = path.join(TMP_DIR, 'pirate-test.txt');
     await exportForPirateSynthWt(makeFrames(2, 8, 0.25), outPath);
     expect(fs.existsSync(outPath)).toBe(true);
   });
 
   test('writes one numeric sample per line', async () => {
-    const outPath = path.join(TMP_DIR, 'pirate-lines.wt');
+    const outPath = path.join(TMP_DIR, 'pirate-lines.txt');
     await exportForPirateSynthWt(makeFrames(2, 8, 0.25), outPath);
     const lines = fs.readFileSync(outPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(16);
@@ -197,7 +197,7 @@ describe('exportForPirateSynthWt(frames, outputPath)', () => {
   });
 
   test('clamps out-of-range values to [-1, 1]', async () => {
-    const outPath = path.join(TMP_DIR, 'pirate-clamp.wt');
+    const outPath = path.join(TMP_DIR, 'pirate-clamp.txt');
     await exportForPirateSynthWt([new Float32Array([2, -2, 0.5])], outPath);
     const lines = fs.readFileSync(outPath, 'utf8').trim().split('\n');
     expect(lines).toEqual(['1.000000', '-1.000000', '0.500000']);

@@ -80,7 +80,7 @@ async function onGenerate(options, libraryPath) {
       filePaths.push(outPath);
     }
     if (options.target === 'pirate' || options.target === 'all') {
-      const outPath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.wt'));
+      const outPath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.txt'));
       await exportForPirateSynthWt(frames, outPath);
       filePaths.push(outPath);
     }
@@ -112,7 +112,7 @@ async function onGenerateRandom(complexity, frameCount, libraryPath) {
     await exportForPolyend(frames, polyendPath);
     filePaths.push(polyendPath);
 
-    const piratePath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.wt'));
+    const piratePath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.txt'));
     await exportForPirateSynthWt(frames, piratePath);
     filePaths.push(piratePath);
 

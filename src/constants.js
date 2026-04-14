@@ -24,7 +24,7 @@ const POLYEND = {
 
 // pirate-synth text wavetable specification
 const PIRATE_SYNTH = {
-  extension: 'wt',
+  extension: 'txt',
   format: 'text-float',
 };
 
