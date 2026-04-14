@@ -156,7 +156,7 @@ describe('generatorMenu(config)', () => {
     expect(exportForAbleton).not.toHaveBeenCalled();
   });
 
-  test('exports pirate-synth .txt when target=pirate-synth', async () => {
+  test('exports Generic TXT when target=Generic TXT', async () => {
     choose
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(2)

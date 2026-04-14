@@ -76,9 +76,9 @@ const BACK_IDX   = GENERATOR_OPTIONS.indexOf('Back');
 const TARGET_OPTIONS = [
   'Ableton Live (32-bit float WAV)',
   'Polyend Tracker (16-bit PCM WAV)',
-  'pirate-synth (text .txt)',
+  'Generic TXT (.txt)',
   'Both (Ableton + Polyend)',
-  'All (Ableton + Polyend + pirate-synth .txt)',
+  'All (Ableton + Polyend + Generic TXT .txt)',
 ];
 const TARGET = {
   ABLETON: 0,

@@ -140,8 +140,8 @@ describe('onGenerate(options, libraryPath)', () => {
     expect(exportForPolyend).toHaveBeenCalled();
   });
 
-  test('calls exportForPirateSynthWt when target is pirate', async () => {
-    await onGenerate({ ...opts, target: 'pirate' }, libPath);
+  test('calls exportForPirateSynthWt when target is txt', async () => {
+    await onGenerate({ ...opts, target: 'txt' }, libPath);
     expect(exportForPirateSynthWt).toHaveBeenCalled();
     expect(exportForAbleton).not.toHaveBeenCalled();
     expect(exportForPolyend).not.toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe('onGenerateRandom(complexity, frameCount, libraryPath)', () => {
     expect(result.filePaths).toBeDefined();
   });
 
-  test('random export includes pirate .txt output', async () => {
+  test('random export includes Generic TXT output', async () => {
     await onGenerateRandom(5, 32, libPath);
     expect(exportForPirateSynthWt).toHaveBeenCalled();
   });

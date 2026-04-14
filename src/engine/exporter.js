@@ -146,7 +146,7 @@ async function exportForPolyend(frames, outputPath) {
 }
 
 /**
- * Export wavetable as pirate-synth text .txt format.
+ * Export wavetable as Generic TXT format (one float per line).
  * Format: one float sample per line in [-1, 1].
  * @param {Float32Array[]} frames
  * @param {string} outputPath

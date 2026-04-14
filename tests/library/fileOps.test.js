@@ -84,9 +84,9 @@ describe('ensureSubfolders(libraryPath)', () => {
     await expect(ensureSubfolders(TMP_DIR)).resolves.not.toThrow();
   });
 
-  test('creates pirate subfolder', async () => {
+  test('creates txt subfolder', async () => {
     await ensureSubfolders(TMP_DIR);
-    expect(fs.existsSync(path.join(TMP_DIR, 'pirate'))).toBe(true);
+    expect(fs.existsSync(path.join(TMP_DIR, 'txt'))).toBe(true);
   });
 
   test('creates library root if it does not exist', async () => {
@@ -94,6 +94,6 @@ describe('ensureSubfolders(libraryPath)', () => {
     await ensureSubfolders(newLib);
     expect(fs.existsSync(path.join(newLib, 'ableton'))).toBe(true);
     expect(fs.existsSync(path.join(newLib, 'polyend'))).toBe(true);
-    expect(fs.existsSync(path.join(newLib, 'pirate'))).toBe(true);
+    expect(fs.existsSync(path.join(newLib, 'txt'))).toBe(true);
   });
 });

@@ -7,7 +7,7 @@ const { generateWavetable } = require('../../engine/generator');
 const { generateRandomWavetable } = require('../../engine/randomizer');
 const { exportForAbleton, exportForPolyend, exportForPirateSynthWt } = require('../../engine/exporter');
 
-const VALID_TARGETS = ['ableton', 'polyend', 'pirate', 'both', 'all'];
+const VALID_TARGETS = ['ableton', 'polyend', 'txt', 'both', 'all'];
 
 // ── Pure logic ───────────────────────────────────────────────────────────────
 
@@ -79,8 +79,8 @@ async function onGenerate(options, libraryPath) {
       await exportForPolyend(frames, outPath);
       filePaths.push(outPath);
     }
-    if (options.target === 'pirate' || options.target === 'all') {
-      const outPath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.txt'));
+    if (options.target === 'txt' || options.target === 'all') {
+      const outPath = path.join(libraryPath, 'txt', filename.replace(/\.wav$/i, '.txt'));
       await exportForPirateSynthWt(frames, outPath);
       filePaths.push(outPath);
     }
@@ -112,7 +112,7 @@ async function onGenerateRandom(complexity, frameCount, libraryPath) {
     await exportForPolyend(frames, polyendPath);
     filePaths.push(polyendPath);
 
-    const piratePath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.txt'));
+    const piratePath = path.join(libraryPath, 'txt', filename.replace(/\.wav$/i, '.txt'));
     await exportForPirateSynthWt(frames, piratePath);
     filePaths.push(piratePath);
 

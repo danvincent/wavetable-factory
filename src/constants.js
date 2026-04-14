@@ -22,7 +22,7 @@ const POLYEND = {
   format: 'int16',
 };
 
-// pirate-synth text wavetable specification
+// Generic TXT wavetable specification
 const PIRATE_SYNTH = {
   extension: 'txt',
   format: 'text-float',
@@ -33,7 +33,7 @@ const DAW_SPECS = { ABLETON, POLYEND, PIRATE_SYNTH };
 const SUBFOLDER_NAMES = {
   ABLETON: 'ableton',
   POLYEND: 'polyend',
-  PIRATE: 'pirate',
+  PIRATE: 'txt',
 };
 
 const WAVEFORM_TYPES = ['sine', 'sawtooth', 'square', 'triangle', 'pulse', 'additive', 'noise', 'wavefold', 'fm', 'supersaw'];
