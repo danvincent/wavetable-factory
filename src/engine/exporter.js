@@ -1,6 +1,8 @@
 'use strict';
 
 const fs = require('fs-extra');
+const path = require('path');
+const os = require('os');
 const { ABLETON, POLYEND } = require('../constants');
 
 /**
@@ -43,6 +45,19 @@ function writeWavHeader(buf, { numChannels, sampleRate, bitsPerSample, audioForm
   buf.writeUInt32LE(dataSize, 40);
 }
 
+function assertSafeOutputPath(outputPath) {
+  const resolvedOutputPath = path.resolve(outputPath);
+  const resolvedTmpDir = path.resolve(os.tmpdir());
+  const relativeToTmp = path.relative(resolvedTmpDir, resolvedOutputPath);
+  const isInsideTmp =
+    relativeToTmp === '' ||
+    (!relativeToTmp.startsWith('..') && !path.isAbsolute(relativeToTmp));
+
+  if (isInsideTmp) {
+    throw new Error('Refusing to create export file inside OS temp directory; provide a non-temp output path.');
+  }
+}
+
 /**
  * Concatenate all frames into a single Float32Array.
  * @param {Float32Array[]} frames
@@ -83,6 +98,8 @@ function convertTo16Bit(samples) {
  * @returns {Promise<void>}
  */
 async function exportForAbleton(frames, outputPath) {
+  assertSafeOutputPath(outputPath);
+
   const samples = flattenFrames(frames);
   const HEADER_SIZE = 44;
   const dataSize = samples.length * 4; // 4 bytes per float32
@@ -102,7 +119,7 @@ async function exportForAbleton(frames, outputPath) {
   }
 
   await fs.ensureDir(require('path').dirname(outputPath));
-  await fs.writeFile(outputPath, buf);
+  await fs.writeFile(outputPath, buf, { flag: 'wx', mode: 0o600 });
 }
 
 /**
@@ -113,6 +130,8 @@ async function exportForAbleton(frames, outputPath) {
  * @returns {Promise<void>}
  */
 async function exportForPolyend(frames, outputPath) {
+  assertSafeOutputPath(outputPath);
+
   // Polyend is single-cycle: use first frame only, truncated/padded to 256 samples
   const firstFrame = frames[0];
   const targetLength = POLYEND.samplesPerFrame;
@@ -142,7 +161,29 @@ async function exportForPolyend(frames, outputPath) {
   }
 
   await fs.ensureDir(require('path').dirname(outputPath));
-  await fs.writeFile(outputPath, buf);
+  await fs.writeFile(outputPath, buf, { flag: 'wx', mode: 0o600 });
+}
+
+/**
+ * Export wavetable as Generic TXT format (one float per line).
+ * Format: one float sample per line in [-1, 1].
+ * @param {Float32Array[]} frames
+ * @param {string} outputPath
+ * @returns {Promise<void>}
+ */
+async function exportForGenericTxt(frames, outputPath) {
+  assertSafeOutputPath(outputPath);
+
+  const samples = flattenFrames(frames);
+  const lines = [];
+  for (let i = 0; i < samples.length; i++) {
+    const clamped = Math.max(-1, Math.min(1, samples[i]));
+    lines.push(clamped.toFixed(6));
+  }
+  const content = lines.join('\n') + '\n';
+
+  await fs.ensureDir(require('path').dirname(outputPath));
+  await fs.writeFile(outputPath, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
 }
 
 module.exports = {
@@ -151,4 +192,5 @@ module.exports = {
   convertTo16Bit,
   exportForAbleton,
   exportForPolyend,
+  exportForGenericTxt,
 };

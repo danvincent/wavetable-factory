@@ -23,7 +23,7 @@
 - 🎲 **Random wavetable generation** — morphing, high-complexity wavetables for sound design
 - 📁 **Wavetable library browser** — browse, rename, delete, and preview your library
 - 🔊 **Built-in wavetable player** — real-time playback with position and window controls
-- 🎚️ **Dual export formats** — 32-bit float WAV for Ableton, 16-bit PCM WAV for Polyend Tracker
+- 🎚️ **Triple export formats** — 32-bit float WAV for Ableton, 16-bit PCM WAV for Polyend Tracker, and Generic TXT `.txt`
 - ⚙️ **Persistent settings** — library path stored in `~/.config/wavetable-factory/settings.json`
 - 💅 **Inquirer.js TUI** — clean arrow-key menus, no number punching required
 
@@ -101,7 +101,7 @@ Select **Generate Wavetable** from the main menu. You'll be prompted to:
 1. **Choose a waveform type** (or Random for a fully randomised morph)
 2. **Set complexity** (1–10) — higher values produce richer harmonic content
 3. **Set frame count** (1–256) — number of frames in the wavetable
-4. **Choose export target** — Ableton Live, Polyend Tracker, or Both
+4. **Choose export target** — Ableton Live, Polyend Tracker, Generic TXT `.txt`, Both, or All
 
 Generated wavetables are named `{adjective}-{noun}-table` (e.g. `solar-spiral-table.wav`) and saved to your library.
 
@@ -128,13 +128,17 @@ Generated wavetables are named `{adjective}-{noun}-table` (e.g. `solar-spiral-ta
 |--------|--------|-------------|-----------|------------|------------|
 | **Ableton Live** | 32-bit float WAV | 44,100 Hz | 32-bit | 2048 samples | 256 |
 | **Polyend Tracker** | 16-bit PCM WAV | 44,100 Hz | 16-bit | 256 samples | 1 |
+| **Generic TXT** | text `.txt` (one float sample per line) | N/A | text float | generated from full wavetable sample stream | N/A |
 
 Files are saved into dedicated subfolders inside your library:
 ```
 <library-path>/
   ableton/    ← 32-bit float WAVs for Ableton Live's Wavetable synth
   polyend/    ← 16-bit PCM WAVs for Polyend Tracker
+  txt/        ← Generic TXT `.txt` files (one float sample per line)
 ```
+
+> ⚠️ Generic TXT `.txt` files are plain-text numeric wavetables and are **not** Bitwig/Surge binary `.wt` (`vawt`) files.
 
 ---
 
@@ -195,7 +199,7 @@ wavetable-factory/
 │   ├── engine/
 │   │   ├── generator.js         # Wavetable frame generator
 │   │   ├── randomizer.js        # Random wavetable generation
-│   │   ├── exporter.js          # WAV file writer (Ableton + Polyend)
+│   │   ├── exporter.js          # Wavetable exporters (Ableton WAV, Polyend WAV, Generic TXT)
 │   │   └── waveforms.js         # Individual waveform generators
 │   └── library/
 │       ├── scanner.js           # Recursive library scanner

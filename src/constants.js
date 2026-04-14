@@ -22,11 +22,18 @@ const POLYEND = {
   format: 'int16',
 };
 
-const DAW_SPECS = { ABLETON, POLYEND };
+// Generic TXT wavetable specification
+const GENERIC_TXT = {
+  extension: 'txt',
+  format: 'text-float',
+};
+
+const DAW_SPECS = { ABLETON, POLYEND, GENERIC_TXT };
 
 const SUBFOLDER_NAMES = {
   ABLETON: 'ableton',
   POLYEND: 'polyend',
+  TXT: 'txt',
 };
 
 const WAVEFORM_TYPES = ['sine', 'sawtooth', 'square', 'triangle', 'pulse', 'additive', 'noise', 'wavefold', 'fm', 'supersaw'];
@@ -47,6 +54,7 @@ const DEFAULT_SETTINGS = {
 module.exports = {
   ABLETON,
   POLYEND,
+  GENERIC_TXT,
   DAW_SPECS,
   SUBFOLDER_NAMES,
   WAVEFORM_TYPES,

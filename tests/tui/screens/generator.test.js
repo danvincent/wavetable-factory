@@ -25,12 +25,13 @@ jest.mock('../../../src/engine/randomizer', () => ({
 jest.mock('../../../src/engine/exporter', () => ({
   exportForAbleton: jest.fn(() => Promise.resolve()),
   exportForPolyend: jest.fn(() => Promise.resolve()),
+  exportForGenericTxt: jest.fn(() => Promise.resolve()),
 }));
 
 const { parseFormValues, buildFilename, onGenerate, onGenerateRandom } = require('../../../src/tui/screens/generator');
 const { generateWavetable } = require('../../../src/engine/generator');
 const { generateRandomWavetable } = require('../../../src/engine/randomizer');
-const { exportForAbleton, exportForPolyend } = require('../../../src/engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForGenericTxt } = require('../../../src/engine/exporter');
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -67,7 +68,7 @@ describe('parseFormValues(values)', () => {
     expect(() => parseFormValues({ ...valid, type: 'laser' })).toThrow(/type/i);
   });
 
-  test('throws when target is not ableton, polyend, or both', () => {
+  test('throws when target is not a valid export target', () => {
     expect(() => parseFormValues({ ...valid, target: 'garage-band' })).toThrow(/target/i);
   });
 
@@ -139,6 +140,20 @@ describe('onGenerate(options, libraryPath)', () => {
     expect(exportForPolyend).toHaveBeenCalled();
   });
 
+  test('calls exportForGenericTxt when target is txt', async () => {
+    await onGenerate({ ...opts, target: 'txt' }, libPath);
+    expect(exportForGenericTxt).toHaveBeenCalled();
+    expect(exportForAbleton).not.toHaveBeenCalled();
+    expect(exportForPolyend).not.toHaveBeenCalled();
+  });
+
+  test('calls all exporters when target is all', async () => {
+    await onGenerate({ ...opts, target: 'all' }, libPath);
+    expect(exportForAbleton).toHaveBeenCalled();
+    expect(exportForPolyend).toHaveBeenCalled();
+    expect(exportForGenericTxt).toHaveBeenCalled();
+  });
+
   test('calls only exportForAbleton when target is ableton', async () => {
     await onGenerate({ ...opts, target: 'ableton' }, libPath);
     expect(exportForAbleton).toHaveBeenCalled();
@@ -197,6 +212,11 @@ describe('onGenerateRandom(complexity, frameCount, libraryPath)', () => {
     const result = await onGenerateRandom(5, 32, libPath);
     expect(result.success).toBe(true);
     expect(result.filePaths).toBeDefined();
+  });
+
+  test('random export includes Generic TXT output', async () => {
+    await onGenerateRandom(5, 32, libPath);
+    expect(exportForGenericTxt).toHaveBeenCalled();
   });
 
   test('returns error result on failure', async () => {

@@ -6,7 +6,7 @@ const fs   = require('fs-extra');
 const { choose, askValidated, ask, printHeader, printSuccess, printError, printInfo, hr } = require('../prompt');
 const { generateWavetable } = require('../../engine/generator');
 const { generateRandomWavetable } = require('../../engine/randomizer');
-const { exportForAbleton, exportForPolyend } = require('../../engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForGenericTxt } = require('../../engine/exporter');
 const {
   WAVEFORM_TYPES, ABLETON, POLYEND, SUBFOLDER_NAMES,
   COMPLEXITY_MIN, COMPLEXITY_MAX, COMPLEXITY_DEFAULT,
@@ -42,18 +42,25 @@ function generateName() {
 async function saveWavetable(frames, name, target, libraryPath) {
   const abletonDir = path.join(libraryPath, SUBFOLDER_NAMES.ABLETON);
   const polyendDir = path.join(libraryPath, SUBFOLDER_NAMES.POLYEND);
+  const txtDir = path.join(libraryPath, SUBFOLDER_NAMES.TXT);
   const saved = [];
 
-  if (target === 0 || target === 2) {
+  if (target === TARGET.ABLETON || target === TARGET.BOTH || target === TARGET.ALL) {
     await fs.ensureDir(abletonDir);
     const out = path.join(abletonDir, `${name}.wav`);
     await exportForAbleton(frames, out);
     saved.push(out);
   }
-  if (target === 1 || target === 2) {
+  if (target === TARGET.POLYEND || target === TARGET.BOTH || target === TARGET.ALL) {
     await fs.ensureDir(polyendDir);
     const out = path.join(polyendDir, `${name}.wav`);
     await exportForPolyend(frames, out);
+    saved.push(out);
+  }
+  if (target === TARGET.TXT || target === TARGET.ALL) {
+    await fs.ensureDir(txtDir);
+    const out = path.join(txtDir, `${name}.txt`);
+    await exportForGenericTxt(frames, out);
     saved.push(out);
   }
   return saved;
@@ -66,8 +73,21 @@ const GENERATOR_OPTIONS = [...WAVEFORM_LABELS, 'Random (fully randomised)', 'Bac
 const RANDOM_IDX = GENERATOR_OPTIONS.indexOf('Random (fully randomised)');
 const BACK_IDX   = GENERATOR_OPTIONS.indexOf('Back');
 
-const TARGET_OPTIONS  = ['Ableton Live (32-bit float)', 'Polyend Tracker (16-bit PCM)', 'Both'];
-const TARGET_DEFAULT  = 2; // Both
+const TARGET_OPTIONS = [
+  'Ableton Live (32-bit float WAV)',
+  'Polyend Tracker (16-bit PCM WAV)',
+  'Generic TXT (.txt)',
+  'Both (Ableton + Polyend)',
+  'All (Ableton + Polyend + Generic TXT .txt)',
+];
+const TARGET = {
+  ABLETON: 0,
+  POLYEND: 1,
+  TXT: 2,
+  BOTH: 3,
+  ALL: 4,
+};
+const TARGET_DEFAULT  = TARGET.BOTH;
 
 async function generatorMenu(config) {
   while (true) {
