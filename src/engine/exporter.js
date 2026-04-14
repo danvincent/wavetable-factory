@@ -161,7 +161,7 @@ async function exportForPolyend(frames, outputPath) {
   }
 
   await fs.ensureDir(require('path').dirname(outputPath));
-  await fs.writeFile(outputPath, buf, { flag: 'wx' });
+  await fs.writeFile(outputPath, buf, { flag: 'wx', mode: 0o600 });
 }
 
 /**
@@ -183,7 +183,7 @@ async function exportForGenericTxt(frames, outputPath) {
   const content = lines.join('\n') + '\n';
 
   await fs.ensureDir(require('path').dirname(outputPath));
-  await fs.writeFile(outputPath, content, { encoding: 'utf8', flag: 'wx' });
+  await fs.writeFile(outputPath, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
 }
 
 module.exports = {
