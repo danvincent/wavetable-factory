@@ -22,11 +22,18 @@ const POLYEND = {
   format: 'int16',
 };
 
-const DAW_SPECS = { ABLETON, POLYEND };
+// pirate-synth text wavetable specification
+const PIRATE_SYNTH = {
+  extension: 'wt',
+  format: 'text-float',
+};
+
+const DAW_SPECS = { ABLETON, POLYEND, PIRATE_SYNTH };
 
 const SUBFOLDER_NAMES = {
   ABLETON: 'ableton',
   POLYEND: 'polyend',
+  PIRATE: 'pirate',
 };
 
 const WAVEFORM_TYPES = ['sine', 'sawtooth', 'square', 'triangle', 'pulse', 'additive', 'noise', 'wavefold', 'fm', 'supersaw'];
@@ -47,6 +54,7 @@ const DEFAULT_SETTINGS = {
 module.exports = {
   ABLETON,
   POLYEND,
+  PIRATE_SYNTH,
   DAW_SPECS,
   SUBFOLDER_NAMES,
   WAVEFORM_TYPES,

@@ -5,6 +5,7 @@ jest.mock('../../../src/engine/randomizer', () => ({ generateRandomWavetable: je
 jest.mock('../../../src/engine/exporter',   () => ({
   exportForAbleton: jest.fn().mockResolvedValue(undefined),
   exportForPolyend: jest.fn().mockResolvedValue(undefined),
+  exportForPirateSynthWt: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('fs-extra', () => ({ ensureDir: jest.fn().mockResolvedValue(undefined) }));
 
@@ -22,7 +23,7 @@ jest.mock('../../../src/cli/prompt', () => ({
 const { choose, ask, askValidated, printSuccess, printError } = require('../../../src/cli/prompt');
 const { generateWavetable }      = require('../../../src/engine/generator');
 const { generateRandomWavetable } = require('../../../src/engine/randomizer');
-const { exportForAbleton, exportForPolyend } = require('../../../src/engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForPirateSynthWt } = require('../../../src/engine/exporter');
 const { generatorMenu, generateName }        = require('../../../src/cli/screens/generator');
 
 const FAKE_FRAMES = [new Float32Array(2048)];
@@ -31,7 +32,7 @@ const MOCK_CONFIG = { getLibraryPath: jest.fn(() => '/lib') };
 // 10 waveform types (0-9), Random = 10, Back = 11
 const BACK_IDX   = 11;
 const RANDOM_IDX = 10;
-const TARGET_BOTH = 2;
+const TARGET_BOTH = 3;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -100,7 +101,7 @@ describe('generatorMenu(config)', () => {
   test('exports both formats when target=Both', async () => {
     choose
       .mockResolvedValueOnce(0)          // sine
-      .mockResolvedValueOnce(2)          // Both
+      .mockResolvedValueOnce(3)          // Both
       .mockResolvedValueOnce(BACK_IDX);
     askValidated
       .mockResolvedValueOnce('5')
@@ -144,7 +145,7 @@ describe('generatorMenu(config)', () => {
     const cfg = { getLibraryPath: jest.fn(() => null) };
     choose
       .mockResolvedValueOnce(0)          // sine
-      .mockResolvedValueOnce(2)          // target: Both
+      .mockResolvedValueOnce(3)          // target: Both
       .mockResolvedValueOnce(BACK_IDX);  // exit after error
     askValidated
       .mockResolvedValueOnce('5')
@@ -153,6 +154,38 @@ describe('generatorMenu(config)', () => {
     await generatorMenu(cfg);
     expect(printError).toHaveBeenCalledWith(expect.stringMatching(/library path/i));
     expect(exportForAbleton).not.toHaveBeenCalled();
+  });
+
+  test('exports pirate-synth .wt when target=pirate-synth', async () => {
+    choose
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(BACK_IDX);
+    askValidated
+      .mockResolvedValueOnce('5')
+      .mockResolvedValueOnce('64');
+    ask.mockResolvedValueOnce('');
+
+    await generatorMenu(MOCK_CONFIG);
+    expect(exportForPirateSynthWt).toHaveBeenCalled();
+    expect(exportForAbleton).not.toHaveBeenCalled();
+    expect(exportForPolyend).not.toHaveBeenCalled();
+  });
+
+  test('exports all formats when target=All', async () => {
+    choose
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(4)
+      .mockResolvedValueOnce(BACK_IDX);
+    askValidated
+      .mockResolvedValueOnce('5')
+      .mockResolvedValueOnce('64');
+    ask.mockResolvedValueOnce('');
+
+    await generatorMenu(MOCK_CONFIG);
+    expect(exportForAbleton).toHaveBeenCalled();
+    expect(exportForPolyend).toHaveBeenCalled();
+    expect(exportForPirateSynthWt).toHaveBeenCalled();
   });
 
   test('uses custom complexity', async () => {

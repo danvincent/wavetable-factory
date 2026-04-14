@@ -33,7 +33,7 @@ async function deleteFile(filePath) {
 }
 
 /**
- * Ensure the library's ableton/ and polyend/ subfolders exist.
+ * Ensure the library's export subfolders exist.
  * Creates the library root as well if absent.
  *
  * @param {string} libraryPath
@@ -42,6 +42,7 @@ async function deleteFile(filePath) {
 async function ensureSubfolders(libraryPath) {
   await fs.ensureDir(path.join(libraryPath, SUBFOLDER_NAMES.ABLETON));
   await fs.ensureDir(path.join(libraryPath, SUBFOLDER_NAMES.POLYEND));
+  await fs.ensureDir(path.join(libraryPath, SUBFOLDER_NAMES.PIRATE));
 }
 
 module.exports = { renameFile, deleteFile, ensureSubfolders };

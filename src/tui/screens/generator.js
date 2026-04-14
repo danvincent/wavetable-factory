@@ -5,9 +5,9 @@ const blessed = require('blessed');
 const { WAVEFORM_TYPES, ABLETON, COMPLEXITY_MIN, COMPLEXITY_MAX } = require('../../constants');
 const { generateWavetable } = require('../../engine/generator');
 const { generateRandomWavetable } = require('../../engine/randomizer');
-const { exportForAbleton, exportForPolyend } = require('../../engine/exporter');
+const { exportForAbleton, exportForPolyend, exportForPirateSynthWt } = require('../../engine/exporter');
 
-const VALID_TARGETS = ['ableton', 'polyend', 'both'];
+const VALID_TARGETS = ['ableton', 'polyend', 'pirate', 'both', 'all'];
 
 // ── Pure logic ───────────────────────────────────────────────────────────────
 
@@ -69,14 +69,19 @@ async function onGenerate(options, libraryPath) {
     const filename = buildFilename(options);
     const filePaths = [];
 
-    if (options.target === 'ableton' || options.target === 'both') {
+    if (options.target === 'ableton' || options.target === 'both' || options.target === 'all') {
       const outPath = path.join(libraryPath, 'ableton', filename);
       await exportForAbleton(frames, outPath);
       filePaths.push(outPath);
     }
-    if (options.target === 'polyend' || options.target === 'both') {
+    if (options.target === 'polyend' || options.target === 'both' || options.target === 'all') {
       const outPath = path.join(libraryPath, 'polyend', filename);
       await exportForPolyend(frames, outPath);
+      filePaths.push(outPath);
+    }
+    if (options.target === 'pirate' || options.target === 'all') {
+      const outPath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.wt'));
+      await exportForPirateSynthWt(frames, outPath);
       filePaths.push(outPath);
     }
 
@@ -87,7 +92,7 @@ async function onGenerate(options, libraryPath) {
 }
 
 /**
- * Generate a fully random wavetable and export to both library subfolders.
+ * Generate a fully random wavetable and export to all library subfolders.
  * @param {number} complexity
  * @param {number} frameCount
  * @param {string} libraryPath
@@ -106,6 +111,10 @@ async function onGenerateRandom(complexity, frameCount, libraryPath) {
     const polyendPath = path.join(libraryPath, 'polyend', filename);
     await exportForPolyend(frames, polyendPath);
     filePaths.push(polyendPath);
+
+    const piratePath = path.join(libraryPath, 'pirate', filename.replace(/\.wav$/i, '.wt'));
+    await exportForPirateSynthWt(frames, piratePath);
+    filePaths.push(piratePath);
 
     return { success: true, filePaths };
   } catch (err) {
@@ -170,7 +179,7 @@ function createGeneratorScreen(panel, config) {
   // ── Target selector ────────────────────────────────────────────────────────
   blessed.text({ parent: container, top: 6, left: FORM_LEFT, content: 'Export Target:' });
   const targetList = blessed.list({
-    parent: container, top: 7, left: FORM_LEFT, width: 16, height: 5,
+    parent: container, top: 7, left: FORM_LEFT, width: 22, height: VALID_TARGETS.length + 2,
     label: ' Target ', border: { type: 'line' },
     style: { selected: { bg: 'blue' }, border: { fg: 'cyan' } },
     items: VALID_TARGETS, keys: true, mouse: true,

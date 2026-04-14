@@ -145,10 +145,31 @@ async function exportForPolyend(frames, outputPath) {
   await fs.writeFile(outputPath, buf);
 }
 
+/**
+ * Export wavetable as pirate-synth text .wt format.
+ * Format: one float sample per line in [-1, 1].
+ * @param {Float32Array[]} frames
+ * @param {string} outputPath
+ * @returns {Promise<void>}
+ */
+async function exportForPirateSynthWt(frames, outputPath) {
+  const samples = flattenFrames(frames);
+  const lines = [];
+  for (let i = 0; i < samples.length; i++) {
+    const clamped = Math.max(-1, Math.min(1, samples[i]));
+    lines.push(clamped.toFixed(6));
+  }
+  const content = lines.join('\n') + '\n';
+
+  await fs.ensureDir(require('path').dirname(outputPath));
+  await fs.writeFile(outputPath, content, 'utf8');
+}
+
 module.exports = {
   writeWavHeader,
   flattenFrames,
   convertTo16Bit,
   exportForAbleton,
   exportForPolyend,
+  exportForPirateSynthWt,
 };

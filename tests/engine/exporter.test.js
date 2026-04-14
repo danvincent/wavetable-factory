@@ -3,7 +3,13 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs-extra');
-const { exportForAbleton, exportForPolyend, convertTo16Bit, flattenFrames } = require('../../src/engine/exporter');
+const {
+  exportForAbleton,
+  exportForPolyend,
+  exportForPirateSynthWt,
+  convertTo16Bit,
+  flattenFrames,
+} = require('../../src/engine/exporter');
 
 const TMP_DIR = path.join(os.tmpdir(), 'wf-exporter-test-' + process.pid);
 
@@ -172,5 +178,28 @@ describe('exportForPolyend(frames, outputPath)', () => {
     const buf = fs.readFileSync(outPath);
     const header = parseWavHeader(buf);
     expect(header.dataSize).toBe(256 * 2);
+  });
+});
+
+describe('exportForPirateSynthWt(frames, outputPath)', () => {
+  test('creates a .wt text file on disk', async () => {
+    const outPath = path.join(TMP_DIR, 'pirate-test.wt');
+    await exportForPirateSynthWt(makeFrames(2, 8, 0.25), outPath);
+    expect(fs.existsSync(outPath)).toBe(true);
+  });
+
+  test('writes one numeric sample per line', async () => {
+    const outPath = path.join(TMP_DIR, 'pirate-lines.wt');
+    await exportForPirateSynthWt(makeFrames(2, 8, 0.25), outPath);
+    const lines = fs.readFileSync(outPath, 'utf8').trim().split('\n');
+    expect(lines).toHaveLength(16);
+    expect(lines[0]).toMatch(/^-?\d+\.\d+$/);
+  });
+
+  test('clamps out-of-range values to [-1, 1]', async () => {
+    const outPath = path.join(TMP_DIR, 'pirate-clamp.wt');
+    await exportForPirateSynthWt([new Float32Array([2, -2, 0.5])], outPath);
+    const lines = fs.readFileSync(outPath, 'utf8').trim().split('\n');
+    expect(lines).toEqual(['1.000000', '-1.000000', '0.500000']);
   });
 });
