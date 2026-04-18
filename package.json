@@ -26,7 +26,7 @@
     "wav": "^1.0.2"
   },
   "devDependencies": {
-    "eslint": "^10.2.0",
+    "eslint": "^10.2.1",
     "jest": "^30.3.0"
   },
   "engines": {
