@@ -18,7 +18,7 @@
   "description": "Wavetable synthesis and library management tool for Ableton Live and Polyend Tracker",
   "dependencies": {
     "blessed": "^0.1.81",
-    "chalk": "^4.1.2",
+    "chalk": "^5.6.2",
     "figlet": "^1.11.0",
     "fs-extra": "^11.3.4",
     "inquirer": "^8.2.7",
